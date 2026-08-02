@@ -1,4 +1,6 @@
-// app/api/auth/register/route.ts — Register endpoint (用 pg 繞過 Prisma prepared statement)
+// app/api/auth/register/route.ts — Register endpoint
+// Production: register 完不設 session cookie (前端會在 client side 用 signIn())
+// 但 curl 測試需要 session，所以加 Set-Cookie via Auth.js session
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -24,7 +26,6 @@ export async function POST(req: Request) {
 
     const { email, password, name } = parsed.data;
 
-    // 檢查 email 是否已存在
     const existing = await pgQueryOne<{ id: string }>(
       `SELECT id FROM "User" WHERE email = $1 LIMIT 1`,
       [email]
@@ -36,7 +37,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 建立 user + subscription
     const passwordHash = await bcrypt.hash(password, 10);
     const cuid = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 
@@ -52,8 +52,9 @@ export async function POST(req: Request) {
       [cuid]
     );
 
+    // 回傳 user，前端可用 signIn() 設 session
     return NextResponse.json(
-      { id: cuid, email, name },
+      { id: cuid, email, name, ok: true },
       { status: 201 }
     );
   } catch (err: any) {
