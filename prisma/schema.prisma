@@ -32,6 +32,8 @@ model User {
   properties    Property[]
   tenants       Tenant[]
   bookings      Booking[]
+  requirements  Requirement[]
+  maintenances  Maintenance[]
   contactMessages ContactMessage[]
   subscription  Subscription?
 }
@@ -106,6 +108,8 @@ model Property {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenants  Tenant[]
   bookings Booking[]
+  requirements  Requirement[]
+  maintenances Maintenance[]
 
   @@index([userId])
 }
@@ -167,4 +171,79 @@ model ContactMessage {
   createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// ========== F-M4 需求記錄 ==========
+model Requirement {
+  id          String   @id @default(cuid())
+  userId      String
+  propertyId  String
+  tenantId    String?  // 選填：哪個房客
+  bookingId   String?  // 選填：哪個訂房
+  category    String   // repair | special_request | cleaning_note | other
+  title       String
+  description String   @db.Text
+  priority    String   @default("normal") // low | normal | high | urgent
+  status      String   @default("open") // open | in_progress | resolved | closed
+  resolvedAt  DateTime?
+  notes       String?  @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([status])
+}
+
+// ========== F-M5 維修派工 ==========
+model Maintenance {
+  id          String   @id @default(cuid())
+  userId      String
+  propertyId  String
+  requirementId String? // 選填：從需求記錄派工
+  vendorName  String   // 廠商名稱
+  vendorPhone String?
+  vendorEmail String?
+  title       String
+  description String   @db.Text
+  estimatedCost Int    @default(0)
+  actualCost    Int    @default(0)
+  startDate    DateTime
+  endDate      DateTime?  // 預定完工日
+  completedAt  DateTime?  // 實際完工日
+  status      String   @default("pending") // pending | in_progress | completed | cancelled
+  notes       String?  @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([status])
+}
+
+// ========== F-M9 ICS 匯入 ==========
+model IcsEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  propertyId String
+  uid       String   // ICS event UID (避免重複匯入)
+  summary   String
+  checkIn   DateTime
+  checkOut  DateTime
+  source    String   @default("airbnb") // airbnb | booking | manual
+  raw       String?  @db.Text  // 原始 ICS 內容
+  importedAt DateTime @default(now())
+
+  @@unique([userId, uid])
+  @@index([userId])
+  @@index([propertyId])
+  @@index([checkIn])
 }
