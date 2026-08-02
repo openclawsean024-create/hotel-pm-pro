@@ -52,6 +52,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="[email protected]"
+              aria-label="Email 地址"
               required
             />
           </div>
@@ -64,6 +65,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="至少 6 個字元"
+              aria-label="密碼"
               required
             />
           </div>

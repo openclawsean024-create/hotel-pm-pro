@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AppNav } from "@/components/AppNav";
 
 interface Property {
   id: string;
@@ -115,6 +116,8 @@ export default function DashboardPage() {
       </header>
 
       <main className="container-page py-8">
+        <AppNav />
+
         {/* KPI */}
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
           <div className="card">
