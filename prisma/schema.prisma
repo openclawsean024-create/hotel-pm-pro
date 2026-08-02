@@ -1,0 +1,170 @@
+// hotel-pm-pro Prisma schema
+// Postgres via Supabase pooler
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== Auth.js v5 models ==========
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  passwordHash  String?   // 給 Credentials provider
+
+  // hotel-pm 商業欄位
+  tier          String    @default("free") // free | pro | business
+  stripeCustomerId String? @unique
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  properties    Property[]
+  tenants       Tenant[]
+  bookings      Booking[]
+  contactMessages ContactMessage[]
+  subscription  Subscription?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ========== Stripe Subscription ==========
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  stripeSubscriptionId String?  @unique
+  stripePriceId        String?
+  stripeCurrentPeriodEnd DateTime?
+  plan                 String   @default("free") // free | pro | business
+  status               String   @default("active") // active | past_due | canceled
+  cancelAtPeriodEnd    Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ========== hotel-pm Domain Models ==========
+
+model Property {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  address     String
+  roomType    String   // 整層 / 套房 / 雅房
+  area        Float?   // 坪數
+  monthlyRent Int
+  ownerShare  Int      @default(80) // % 給房東
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenants  Tenant[]
+  bookings Booking[]
+
+  @@index([userId])
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  userId    String
+  propertyId String
+  name      String
+  phone     String
+  email     String?
+  startDate DateTime
+  endDate   DateTime?
+  monthlyRent Int
+  deposit   Int      @default(0)
+  status    String   @default("active") // active | ended
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([propertyId])
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  guestName  String
+  checkIn    DateTime
+  checkOut   DateTime
+  channel    String   // airbnb | booking | manual
+  totalPrice Int
+  status     String   @default("confirmed") // confirmed | cancelled | completed
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([checkIn])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  userId    String?  // null = 訪客留言
+  name      String
+  email     String
+  subject   String
+  message   String   @db.Text
+  status    String   @default("new") // new | read | replied
+
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
