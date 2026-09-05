@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { pgQuery } from "@/lib/pg-client";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-07-29.dahlia",
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", {
+  apiVersion: "2026-08-26.dahlia",
 });
 
 export async function POST(req: Request) {
