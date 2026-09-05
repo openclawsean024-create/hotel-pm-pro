@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/properties", label: "物業", icon: "🏘️" },
   { href: "/dashboard/tenants", label: "房客", icon: "👥" },
   { href: "/dashboard/bookings", label: "訂房", icon: "📅" },
+  { href: "/dashboard/ics", label: "ICS 同步", icon: "🔄" },
   { href: "/dashboard/reports", label: "月報表", icon: "📈" },
 ];
 
