@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { pgQuery, pgQueryOne } from "@/lib/pg-client";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", {
-  apiVersion: "2026-08-26.dahlia",
+  apiVersion: "2026-07-29.dahlia",
 });
 
 const PRICE_IDS: Record<string, string | undefined> = {

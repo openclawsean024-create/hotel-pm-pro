@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx prisma/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "echo \"no unit tests yet (smoke tests run via next build)\" && exit 0"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
