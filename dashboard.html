@@ -1,307 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Hotel Pm Pro — hotel-pm commercial version</title>
-<meta name="theme-color" content="#5EBFA1" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%235EBFA1'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-weight='900' font-family='sans-serif'%3EH%3C/text%3E%3C/svg%3E" />
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        bg: '#FAFAF7',
-        card: '#FFFFFF',
-        mint: { 50: '#E6F4F0', 100: '#D2EBE4', 500: '#5EBFA1', 600: '#4DA68A', 700: '#3D8C73' },
-        ink: { 900: '#1A1A1A', 600: '#6B6B6B', 400: '#9A9A95' },
-        line: '#EAEAE5',
-        blue: '#4F8BFF',
-        warn: '#F59E0B',
-        danger: '#EF4444',
-      },
-      fontFamily: {
-        sans: ['"Noto Sans TC"', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-      },
-      borderRadius: { xl2: '16px' },
-    },
-  },
-};
-</script>
-<style>
-  body { font-family: 'Noto Sans TC', system-ui, sans-serif; background: #FAFAF7; color: #1A1A1A; }
-  .sidebar-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; color: #6B6B6B; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
-  .sidebar-item:hover { background: #F5F5F0; color: #1A1A1A; }
-  .sidebar-item.active { background: #E6F4F0; color: #1A1A1A; font-weight: 600; }
-  .card { background: #FFFFFF; border: 1px solid #EAEAE5; border-radius: 16px; padding: 20px; }
-  .kpi { display: flex; flex-direction: column; gap: 8px; }
-  .kpi .label { font-size: 12px; color: #6B6B6B; }
-  .kpi .value { font-size: 32px; font-weight: 700; line-height: 1.1; font-family: 'JetBrains Mono', monospace; }
-  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-  .badge-mint { background: #E6F4F0; color: #3D8C73; }
-  .badge-blue { background: #E5EFFF; color: #2563EB; }
-  .badge-warn { background: #FEF3C7; color: #B45309; }
-  .badge-danger { background: #FEE2E2; color: #B91C1C; }
-  .btn-primary { background: #5EBFA1; color: white; border: none; border-radius: 10px; padding: 10px 20px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-  .btn-primary:hover { background: #4DA68A; }
-  .progress { height: 6px; background: #F5F5F0; border-radius: 999px; overflow: hidden; }
-  .progress-bar { height: 100%; background: #5EBFA1; transition: width 0.3s; }
-  .quick-action { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; cursor: pointer; transition: all 0.15s; }
-  .quick-action:hover { background: #F5F5F0; }
-  .quick-action .icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .timeline-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #F5F5F0; }
-  .timeline-item:last-child { border-bottom: none; }
-  .timeline-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
-  .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #EAEAE5; display: none; padding: 8px 0; z-index: 50; }
-  .mobile-nav button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; color: #6B6B6B; font-size: 10px; background: none; border: none; flex: 1; cursor: pointer; }
-  .mobile-nav button.active { color: #5EBFA1; font-weight: 600; }
-  @media (max-width: 768px) {
-    .desktop-sidebar { display: none; }
-    .mobile-nav { display: flex; }
-    .main-content { padding-bottom: 80px; }
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7faf8" />
+  <title>民宿管家｜營運總覽原型</title>
+  <style>
+    :root{--canvas:#f7faf8;--surface:#fff;--surface-soft:#f1f6f3;--surface-mint:#e4f4ed;--ink:#173331;--muted:#6d7f7c;--quiet:#9aaba7;--line:#dce8e3;--mint:#2f9e7c;--mint-deep:#23745d;--mint-dark:#17483e;--blue:#3977c8;--blue-soft:#eaf2fc;--amber:#c88420;--amber-soft:#fff4df;--coral:#cf5f56;--coral-soft:#fff0ee;--shadow:0 12px 30px rgba(28,70,61,.07);--shadow-sm:0 5px 14px rgba(28,70,61,.06);--radius-lg:18px;--radius-md:12px;--radius-sm:9px;--font:"Noto Sans TC","PingFang TC",system-ui,-apple-system,sans-serif;--mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+    *{box-sizing:border-box}html{background:var(--canvas)}body{margin:0;color:var(--ink);background:var(--canvas);font-family:var(--font);font-size:14px;line-height:1.6}button,input,select{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}svg{display:block}.icon{width:18px;height:18px;flex:0 0 auto}.icon-sm{width:15px;height:15px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .app{min-height:100vh;display:flex}.sidebar{width:252px;flex:0 0 252px;min-height:100vh;background:var(--surface);border-right:1px solid var(--line);padding:24px 16px 18px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;z-index:30}.brand{display:flex;align-items:center;gap:11px;padding:0 10px;margin-bottom:24px}.brand-mark{width:37px;height:37px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--mint-deep);box-shadow:0 8px 14px rgba(35,116,93,.18)}.brand-mark svg{width:20px;height:20px}.brand-name{font-weight:800;letter-spacing:-.02em;font-size:16px;line-height:1.15}.brand-sub{color:var(--quiet);font-size:11px;margin-top:2px}.property-switcher{border:1px solid var(--line);background:var(--surface-soft);border-radius:13px;padding:11px 12px;margin:0 4px 22px;text-align:left;display:flex;align-items:center;gap:10px;color:var(--ink);width:calc(100% - 8px)}.property-switcher:hover{border-color:#a9ccc0;background:#ecf6f1}.property-avatar{width:30px;height:30px;display:grid;place-items:center;background:var(--surface);color:var(--mint-deep);border-radius:9px;font-weight:800;font-size:12px}.property-copy{min-width:0;flex:1}.property-label{color:var(--quiet);display:block;font-size:10px;line-height:1.2}.property-name{display:block;margin-top:3px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chevron{color:var(--muted);width:15px;height:15px}.nav-group{margin:0 0 18px}.nav-heading{padding:0 12px;margin-bottom:7px;color:var(--quiet);font-size:10px;font-weight:800;letter-spacing:.12em}.nav-item{display:flex;align-items:center;gap:11px;color:var(--muted);width:100%;padding:10px 12px;border:0;background:transparent;border-radius:10px;text-align:left;font-size:13px;transition:.15s ease}.nav-item:hover{color:var(--ink);background:var(--surface-soft)}.nav-item.active{color:var(--mint-deep);background:var(--surface-mint);font-weight:750}.nav-item.active .nav-icon{color:var(--mint)}.nav-icon{color:#91a39f;width:17px;height:17px}.nav-badge{margin-left:auto;min-width:21px;padding:0 5px;border-radius:20px;background:var(--coral-soft);color:var(--coral);font-size:10px;font-weight:800;text-align:center}.sidebar-footer{margin-top:auto;border-top:1px solid var(--line);padding:16px 10px 0;color:var(--quiet);font-size:11px}.sidebar-footer-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}.status-dot{width:7px;height:7px;border-radius:50%;background:var(--mint);display:inline-block;margin-right:5px}
+    .main{flex:1;min-width:0}.topbar{height:72px;background:rgba(255,255,255,.88);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 38px;position:sticky;top:0;z-index:20;backdrop-filter:blur(12px)}.breadcrumbs{display:flex;align-items:center;gap:8px;color:var(--quiet);font-size:12px}.breadcrumbs strong{color:var(--ink);font-weight:700}.top-actions{display:flex;align-items:center;gap:10px}.icon-btn{width:36px;height:36px;border:1px solid var(--line);background:var(--surface);border-radius:10px;display:grid;place-items:center;color:var(--muted);position:relative}.icon-btn:hover{border-color:#a9ccc0;color:var(--mint-deep);background:var(--surface-soft)}.notification-dot{position:absolute;width:7px;height:7px;border:2px solid var(--surface);border-radius:50%;top:6px;right:6px;background:var(--coral)}.user-menu{display:flex;align-items:center;gap:9px;border-left:1px solid var(--line);padding-left:15px}.user-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--mint-deep);background:var(--surface-mint);font-weight:800}.user-copy{line-height:1.2}.user-name{font-weight:700;font-size:12px}.user-role{color:var(--quiet);font-size:10px;margin-top:3px}.mobile-menu{display:none}
+    .content{max-width:1440px;margin:0 auto;padding:32px 38px 46px}.page-heading{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:22px}.eyebrow{color:var(--mint);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}h1{font-size:clamp(24px,3vw,30px);letter-spacing:-.045em;line-height:1.25;margin:4px 0 6px}.page-description{color:var(--muted);margin:0}.heading-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;border:1px solid transparent;min-height:38px;padding:0 14px;font-weight:750;font-size:12px;transition:.15s ease}.btn-primary{background:var(--mint-deep);color:#fff;box-shadow:0 6px 14px rgba(35,116,93,.14)}.btn-primary:hover{background:#1b5c4c;transform:translateY(-1px)}.btn-secondary{background:var(--surface);border-color:var(--line);color:var(--ink)}.btn-secondary:hover{border-color:#a9ccc0;background:var(--surface-soft)}.btn-quiet{border:0;color:var(--mint-deep);background:transparent;padding:0;font-size:12px;font-weight:800}.btn-quiet:hover{color:var(--mint)}.alert-strip{display:flex;align-items:center;gap:12px;padding:12px 15px;border:1px solid #f0d7ad;background:#fffaf0;border-radius:var(--radius-md);margin-bottom:22px;color:#865b1f}.alert-icon{color:var(--amber);width:18px;height:18px}.alert-copy{flex:1;font-size:12px}.alert-copy strong{color:#704817}.scope-text{color:var(--quiet);margin-left:auto;font-size:10px}
+    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}.metric-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:18px 19px;box-shadow:var(--shadow-sm)}.metric-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px}.metric-icon{width:30px;height:30px;border-radius:9px;display:grid;place-items:center}.metric-icon.mint{color:var(--mint-deep);background:var(--surface-mint)}.metric-icon.blue{color:var(--blue);background:var(--blue-soft)}.metric-icon.amber{color:var(--amber);background:var(--amber-soft)}.metric-icon.coral{color:var(--coral);background:var(--coral-soft)}.metric-value{margin:12px 0 5px;font-family:var(--mono);font-size:27px;letter-spacing:-.06em;font-weight:800;line-height:1}.metric-foot{display:flex;align-items:center;gap:6px;color:var(--quiet);font-size:11px}.trend-up{color:var(--mint);font-weight:800}.trend-warn{color:var(--amber);font-weight:800}
+    .grid-main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(330px,.9fr);gap:18px;margin-bottom:18px}.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 21px 0}.card-title{font-size:15px;font-weight:800;letter-spacing:-.015em}.card-subtitle{color:var(--muted);font-size:11px;margin-top:3px}.card-body{padding:18px 21px 21px}.segmented{display:inline-flex;gap:3px;padding:3px;background:var(--surface-soft);border-radius:9px}.segment{border:0;background:transparent;color:var(--muted);font-size:11px;padding:5px 9px;border-radius:7px}.segment.active{color:var(--mint-deep);background:var(--surface);box-shadow:0 2px 6px rgba(28,70,61,.08);font-weight:800}.occupancy-summary{display:grid;grid-template-columns:1.2fr repeat(3,1fr);gap:10px;align-items:center;background:var(--surface-soft);border-radius:12px;padding:12px 14px;margin-bottom:16px}.occupancy-rate{font-family:var(--mono);font-size:23px;font-weight:800;color:var(--mint-deep);letter-spacing:-.08em}.occupancy-label{color:var(--muted);font-size:10px;margin-top:2px}.mini-stat{border-left:1px solid var(--line);padding-left:12px}.mini-stat strong{display:block;font-family:var(--mono);font-size:16px;line-height:1.1}.mini-stat span{color:var(--muted);font-size:10px}.room-group+.room-group{margin-top:15px}.room-group-heading{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px;margin-bottom:8px}.room-group-heading strong{color:var(--ink);font-size:12px}.room-grid{display:grid;grid-template-columns:repeat(6,minmax(74px,1fr));gap:8px}.room{min-height:69px;border:1px solid var(--line);border-radius:11px;padding:9px 9px 8px;text-align:left;transition:.15s ease}.room:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}.room-id{display:block;font-family:var(--mono);font-size:12px;font-weight:800}.room-state{display:flex;align-items:center;gap:4px;margin-top:8px;color:var(--muted);font-size:10px;white-space:nowrap}.room-state:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}.room.available{background:#f7fbf9;color:var(--mint-deep)}.room.occupied{background:var(--surface-mint);border-color:#c0e4d5;color:var(--mint-deep)}.room.checkout{background:var(--blue-soft);border-color:#c9dcf4;color:var(--blue)}.room.cleaning{background:var(--amber-soft);border-color:#f1dcae;color:var(--amber)}.room.maintenance{background:var(--coral-soft);border-color:#f1cfcb;color:var(--coral)}.room-legend{display:flex;flex-wrap:wrap;gap:10px 14px;color:var(--muted);font-size:10px;margin-top:17px}.legend{display:inline-flex;align-items:center;gap:5px}.legend:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--line)}.legend.occupied:before{background:var(--mint)}.legend.checkout:before{background:var(--blue)}.legend.cleaning:before{background:var(--amber)}.legend.maintenance:before{background:var(--coral)}
+    .timeline{padding:8px 21px 18px}.timeline-item{display:grid;grid-template-columns:42px 15px 1fr;gap:10px;min-height:67px;position:relative}.timeline-item:not(:last-child):after{content:"";position:absolute;left:49px;top:22px;bottom:-7px;width:1px;background:var(--line)}.timeline-time{color:var(--quiet);font-family:var(--mono);font-size:11px;padding-top:3px}.timeline-dot{width:11px;height:11px;border-radius:50%;margin-top:5px;position:relative;z-index:1;background:var(--surface);border:3px solid var(--mint)}.timeline-dot.blue{border-color:var(--blue)}.timeline-dot.amber{border-color:var(--amber)}.timeline-dot.coral{border-color:var(--coral)}.timeline-title{font-weight:750;font-size:12px}.timeline-meta{color:var(--muted);font-size:11px;margin-top:2px}.timeline-pill{display:inline-flex;align-items:center;border-radius:999px;margin-left:5px;padding:1px 6px;font-size:9px;font-weight:800;background:var(--surface-soft);color:var(--muted);vertical-align:1px}.timeline-pill.amber{background:var(--amber-soft);color:var(--amber)}.timeline-pill.blue{background:var(--blue-soft);color:var(--blue)}.timeline-pill.coral{background:var(--coral-soft);color:var(--coral)}
+    .workbench{margin-bottom:18px}.workbench .card-header{align-items:center}.filter-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.filter{border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 9px;border-radius:8px;font-size:11px}.filter:focus{outline:2px solid var(--surface-mint);border-color:var(--mint)}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:680px}th{color:var(--quiet);text-align:left;font-size:10px;font-weight:750;padding:0 21px 10px;white-space:nowrap}td{border-top:1px solid var(--line);padding:13px 21px;font-size:12px;white-space:nowrap}tr:hover td{background:#fbfdfc}.task-title{font-weight:750}.task-meta{color:var(--muted);font-size:10px;margin-top:2px}.status{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:800}.status:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}.status.todo{color:var(--amber);background:var(--amber-soft)}.status.progress{color:var(--blue);background:var(--blue-soft)}.status.done{color:var(--mint-deep);background:var(--surface-mint)}.priority{font-size:10px;font-weight:800}.priority.high{color:var(--coral)}.priority.medium{color:var(--amber)}.priority.low{color:var(--muted)}.assignee{display:inline-flex;align-items:center;gap:6px}.assignee-avatar{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#e7eef0;color:#496461;font-size:9px;font-weight:800}.table-footer{border-top:1px solid var(--line);margin:0 21px;padding-top:12px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px}
+    .grid-bottom{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(290px,.75fr);gap:18px}.chart-area{height:190px;padding:14px 21px 0;display:flex;gap:14px}.chart-y{display:flex;flex-direction:column;justify-content:space-between;color:var(--quiet);font-family:var(--mono);font-size:9px;padding:2px 0 23px}.chart{position:relative;flex:1;display:flex;align-items:end;justify-content:space-around;gap:8px;padding:0 5px 23px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 41px,var(--surface-soft) 42px);border-bottom:1px solid var(--line)}.bar-group{height:100%;flex:1;display:flex;align-items:end;justify-content:center;gap:4px;position:relative}.bar{width:min(20px,30%);min-width:8px;border-radius:5px 5px 0 0;background:#bfe4d5}.bar.current{background:var(--mint)}.bar-label{position:absolute;bottom:-22px;color:var(--quiet);font-size:10px}.chart-note{display:flex;align-items:center;justify-content:space-between;padding:7px 21px 17px;color:var(--muted);font-size:11px}.chart-note strong{color:var(--ink);font-family:var(--mono);font-size:15px}.chart-legend{display:inline-flex;align-items:center;gap:5px}.chart-legend:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint)}.property-list{padding:8px 21px 18px}.property-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.property-row:last-child{border-bottom:0}.property-row-title{font-weight:750;font-size:12px}.property-row-meta{color:var(--muted);font-size:10px;margin-top:3px}.property-value{text-align:right;font-family:var(--mono);font-weight:800;font-size:13px}.property-value span{display:block;color:var(--mint);font-family:var(--font);font-size:10px;font-weight:700;margin-top:2px}.progress{height:5px;background:var(--surface-soft);border-radius:10px;margin-top:8px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--mint);border-radius:inherit}
+    .quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:18px}.quick-action{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;display:flex;align-items:center;gap:9px;text-align:left;color:var(--ink)}.quick-action:hover{border-color:#a9ccc0;background:var(--surface-soft);transform:translateY(-1px)}.quick-action-icon{width:29px;height:29px;display:grid;place-items:center;border-radius:8px;color:var(--mint-deep);background:var(--surface-mint)}.quick-action:nth-child(2) .quick-action-icon{color:var(--blue);background:var(--blue-soft)}.quick-action:nth-child(3) .quick-action-icon{color:var(--amber);background:var(--amber-soft)}.quick-action:nth-child(4) .quick-action-icon{color:var(--coral);background:var(--coral-soft)}.quick-action-copy{min-width:0}.quick-action-title{display:block;font-size:11px;font-weight:800}.quick-action-hint{display:block;color:var(--muted);font-size:9px;margin-top:2px;white-space:nowrap}
+    .toast{position:fixed;left:50%;bottom:26px;z-index:100;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--mint-dark);color:#fff;border-radius:10px;padding:10px 15px;font-size:12px;box-shadow:0 12px 28px rgba(23,72,62,.22);transition:.2s ease}.toast.visible{opacity:1;transform:translate(-50%,0)}.modal-backdrop{display:none;position:fixed;inset:0;z-index:80;background:rgba(23,51,49,.28);align-items:center;justify-content:center;padding:20px}.modal-backdrop.open{display:flex}.modal{width:min(460px,100%);background:var(--surface);border-radius:18px;box-shadow:0 24px 70px rgba(23,51,49,.24);padding:23px}.modal-header{display:flex;align-items:start;justify-content:space-between;gap:16px;margin-bottom:18px}.modal-title{font-size:18px;font-weight:800;margin:0}.modal-copy{margin:5px 0 0;color:var(--muted);font-size:12px}.modal-close{border:0;background:var(--surface-soft);color:var(--muted);border-radius:8px;width:30px;height:30px;display:grid;place-items:center}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}.form-field{margin-bottom:12px}.form-field label{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:5px}.form-field input,.form-field select{width:100%;border:1px solid var(--line);border-radius:9px;background:var(--surface-soft);color:var(--ink);padding:9px 10px;outline:none}.form-field input:focus,.form-field select:focus{border-color:var(--mint);box-shadow:0 0 0 3px var(--surface-mint)}.modal-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:6px}
+    @media (max-width:1180px){.sidebar{width:224px;flex-basis:224px}.topbar,.content{padding-left:26px;padding-right:26px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-main,.grid-bottom{grid-template-columns:1fr}}
+    @media (max-width:780px){.app{display:block}.sidebar{position:fixed;left:0;top:0;transform:translateX(-105%);transition:transform .2s ease;width:min(270px,88vw);box-shadow:12px 0 30px rgba(23,51,49,.13)}body.sidebar-open:after{content:"";position:fixed;inset:0;z-index:25;background:rgba(23,51,49,.22)}body.sidebar-open .sidebar{transform:translateX(0)}.topbar{height:62px;padding:0 17px}.mobile-menu{display:grid;place-items:center;width:34px;height:34px;margin-right:4px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--muted)}.breadcrumbs{font-size:11px}.breadcrumbs span{display:none}.user-copy{display:none}.user-menu{padding-left:10px}.content{padding:24px 17px 88px}.page-heading{display:block;margin-bottom:18px}.heading-actions{justify-content:flex-start;margin-top:16px}.alert-strip{align-items:flex-start}.alert-strip .btn-quiet{display:none}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric-card{padding:14px}.metric-value{font-size:22px}.metric-top{font-size:10px}.metric-icon{width:26px;height:26px}.card-header{padding:17px 15px 0}.card-body{padding:15px}.occupancy-summary{grid-template-columns:1fr repeat(3,.8fr);padding:10px}.occupancy-rate{font-size:19px}.mini-stat{padding-left:7px}.mini-stat strong{font-size:13px}.room-grid{grid-template-columns:repeat(3,1fr)}.timeline{padding-left:15px;padding-right:15px}.timeline-item:not(:last-child):after{left:43px}.workbench .card-header{display:block}.filter-row{margin-top:12px}th{padding-left:15px;padding-right:15px}td{padding-left:15px;padding-right:15px}.table-footer{margin:0 15px}.chart-area{padding-left:15px;padding-right:15px}.chart-note{padding-left:15px;padding-right:15px}.property-list{padding-left:15px;padding-right:15px}.quick-actions{grid-template-columns:repeat(2,1fr)}.quick-action{padding:10px}.mobile-nav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:22;background:rgba(255,255,255,.96);border-top:1px solid var(--line);padding:8px 8px max(8px,env(safe-area-inset-bottom));backdrop-filter:blur(12px)}.mobile-nav button{flex:1;border:0;background:transparent;color:var(--muted);font-size:10px;display:flex;flex-direction:column;gap:2px;align-items:center}.mobile-nav button.active{color:var(--mint-deep);font-weight:800}.mobile-nav svg{width:17px;height:17px}}
+    @media (min-width:781px){.mobile-nav{display:none}}@media (max-width:420px){.heading-actions .btn{flex:1}.heading-actions .btn-primary{flex:1.25}.occupancy-summary{grid-template-columns:1fr 1fr 1fr}.occupancy-summary>:first-child{grid-column:1/-1}.occupancy-summary .mini-stat{border-left:0;padding-left:0}.room-grid{gap:6px}.room{min-height:63px;padding:8px 7px}.room-state{font-size:9px}}
+  </style>
 </head>
-<body class="min-h-screen flex">
-  <!-- Sidebar -->
-  <aside class="desktop-sidebar w-[220px] bg-white border-r border-line h-screen sticky top-0 flex flex-col p-4 flex-shrink-0">
-    <div class="flex items-center gap-3 px-2 mb-8 mt-2">
-      <div class="w-10 h-10 rounded-xl bg-mint-500 flex items-center justify-center text-white font-black text-lg">H</div>
-      <div>
-        <div class="font-bold text-sm">Hotel Pm Pro</div>
-        <div class="text-xs text-ink-600">v1.0 · Hotel</div>
-      </div>
-    </div>
-    <nav class="flex-1 flex flex-col gap-1">
-      <a class="sidebar-item active" data-page="首頁"><span>🏠</span><span>首頁</span></a>
-        <a class="sidebar-item" data-page="房況總覽"><span>🛏️</span><span>房況總覽</span></a>
-        <a class="sidebar-item" data-page="訂單管理"><span>📅</span><span>訂單管理</span></a>
-        <a class="sidebar-item" data-page="住客資料"><span>👤</span><span>住客資料</span></a>
-        <a class="sidebar-item" data-page="帳務結算"><span>💰</span><span>帳務結算</span></a>
-        <a class="sidebar-item" data-page="營運報表"><span>📊</span><span>營運報表</span></a>
-        <a class="sidebar-item" data-page="設定"><span>⚙️</span><span>設定</span></a>
-        <a class="sidebar-item" data-page="登出"><span>🚪</span><span>登出</span></a>
-    </nav>
-    <div class="border-t border-line pt-3 mt-3 text-xs text-ink-600 px-2">
-      <div>v1.0.0</div>
-      <div class="mt-1">© 2026 OpenClaw</div>
-    </div>
-  </aside>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute"><symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol><symbol id="i-bed" viewBox="0 0 24 24"><path d="M4 18v-7.5h16V18M4 14h16M7 10.5V7h5a3 3 0 0 1 3 3v.5M4 18v2M20 18v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 3v4M8 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c.7-3.2 3.1-5 7-5s6.3 1.8 7 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol><symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.5 6.2a4 4 0 0 0-5.2 5.2L4 16.7a2.3 2.3 0 1 0 3.3 3.3l5.3-5.3a4 4 0 0 0 5.2-5.2l-2.7 2.7-2.2-.6-.6-2.2 2.7-2.7Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="m7 15 3-4 3 2 5-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 7 2-.2-.1 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol><symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.2 9A7 7 0 0 1 18.5 7M17.8 15A7 7 0 0 1 5.5 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol><symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m19 13.5 1.1 1-.1 1.3-1.8 1-.4 1.5-1.7.7-1.3-1H9.2l-1.3 1-1.7-.7-.4-1.5-1.8-1-.1-1.3 1.1-1-.1-1 .1-1-1.1-1 .1-1.3 1.8-1 .4-1.5 1.7-.7 1.3 1h5.6l1.3-1 1.7.7.4 1.5 1.8 1 .1 1.3-1.1 1 .1 1Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol><symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 10a6 6 0 0 0-12 0c0 7-3 7-3 8h18c0-1-3-1-3-8M10 21h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 9 17H3L12 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9v4M12 16.5v.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M8 11l4 4 4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol></svg>
 
-  <!-- Main Content -->
-  <main class="flex-1 main-content">
-    <!-- Header -->
-    <header class="bg-white border-b border-line px-8 py-6">
-      <div class="flex items-start justify-between">
-        <div>
-          <h1 class="text-2xl font-bold mb-1">早安，使用者</h1>
-          <div class="flex items-center gap-2 text-sm text-ink-600">
-            <span class="w-2 h-2 rounded-full bg-mint-500"></span>
-            <span>飯店管理系統</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <button class="px-3 py-2 rounded-lg border border-line text-sm hover:bg-bg transition" id="btn-notify">🔔</button>
-          <div class="w-9 h-9 rounded-full bg-mint-100 flex items-center justify-center font-bold text-mint-700">U</div>
-        </div>
-      </div>
-    </header>
+  <div class="app"><aside class="sidebar" aria-label="主導覽"><div class="brand"><div class="brand-mark"><svg class="icon"><use href="#i-bed"></use></svg></div><div><div class="brand-name">民宿管家</div><div class="brand-sub">Hotel PM Pro · 商業版</div></div></div><button class="property-switcher" type="button" data-property-trigger><span class="property-avatar">全</span><span class="property-copy"><span class="property-label">目前管理範圍</span><span class="property-name" data-scope-label>全部物業</span></span><svg class="chevron"><use href="#i-arrow"></use></svg></button><nav><div class="nav-group"><div class="nav-heading">營運</div><button class="nav-item active" type="button" data-page="總覽"><svg class="nav-icon"><use href="#i-grid"></use></svg><span>總覽</span></button><button class="nav-item" type="button" data-page="房況總覽"><svg class="nav-icon"><use href="#i-bed"></use></svg><span>房況總覽</span><span class="nav-badge">2</span></button></div><div class="nav-group"><div class="nav-heading">管理</div><button class="nav-item" type="button" data-page="訂房管理"><svg class="nav-icon"><use href="#i-calendar"></use></svg><span>訂房管理</span></button><button class="nav-item" type="button" data-page="房客 CRM"><svg class="nav-icon"><use href="#i-user"></use></svg><span>房客 CRM</span></button><button class="nav-item" type="button" data-page="維修與待辦"><svg class="nav-icon"><use href="#i-wrench"></use></svg><span>維修與待辦</span><span class="nav-badge">5</span></button></div><div class="nav-group"><div class="nav-heading">財務與自動化</div><button class="nav-item" type="button" data-page="月報與分帳"><svg class="nav-icon"><use href="#i-chart"></use></svg><span>月報與分帳</span></button><button class="nav-item" type="button" data-page="ICS 同步"><svg class="nav-icon"><use href="#i-sync"></use></svg><span>ICS 同步</span></button></div><div class="nav-group"><button class="nav-item" type="button" data-page="設定"><svg class="nav-icon"><use href="#i-settings"></use></svg><span>設定</span></button></div></nav><div class="sidebar-footer"><div class="sidebar-footer-row"><span><span class="status-dot"></span>系統運作正常</span><span>v1.1</span></div><div>Pro 方案 · 下次結算 10/01</div></div></aside>
 
-    <div class="p-8">
-      <!-- Top KPI Row -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
-        <div class="card kpi">
-        <div class="flex items-center justify-between">
-          <div class="label">今日入住</div>
-          <span class="badge badge-mint">●</span>
-        </div>
-        <div class="value">12 房</div>
-        <div class="text-xs text-ink-600">滿約率 75%</div>
-        
-      </div>
-      <div class="card kpi">
-        <div class="flex items-center justify-between">
-          <div class="label">本月營收</div>
-          <span class="badge badge-blue">●</span>
-        </div>
-        <div class="value">$284,500</div>
-        <div class="text-xs text-ink-600">↗ 較上月 +8%</div>
-        
-      </div>
-      <div class="card kpi">
-        <div class="flex items-center justify-between">
-          <div class="label">待處理訂單</div>
-          <span class="badge badge-warn">●</span>
-        </div>
-        <div class="value">5</div>
-        <div class="text-xs text-ink-600">3 件已確認</div>
-        
-      </div>
-      </div>
+    <main class="main"><header class="topbar"><div class="breadcrumbs"><button class="mobile-menu" type="button" data-menu-toggle aria-label="開啟導覽"><svg class="icon"><use href="#i-menu"></use></svg></button><span>民宿管家</span><span>/</span><strong data-breadcrumb>總覽</strong></div><div class="top-actions"><button class="icon-btn" type="button" data-notify aria-label="通知"><svg class="icon"><use href="#i-bell"></use></svg><span class="notification-dot"></span></button><div class="user-menu"><div class="user-avatar">林</div><div class="user-copy"><div class="user-name">林怡君</div><div class="user-role">營運管理者</div></div></div></div></header>
+      <div class="content"><section class="page-heading"><div><div class="eyebrow">Monday · 2026.09.21</div><h1 data-page-title>早安，怡君。今天有 7 件事要處理</h1><p class="page-description">先看房況，再把影響入住體驗的工作清掉。<span class="scope-text" data-scope-inline>目前為全部物業</span></p></div><div class="heading-actions"><button class="btn btn-secondary" type="button" data-action="匯出月報"><svg class="icon-sm"><use href="#i-download"></use></svg>匯出月報</button><button class="btn btn-primary" type="button" data-action="新增訂房"><svg class="icon-sm"><use href="#i-plus"></use></svg>新增訂房</button></div></section>
+      <div class="alert-strip"><svg class="alert-icon"><use href="#i-alert"></use></svg><div class="alert-copy"><strong>需要留意：</strong> 208 房退房後尚未完成清潔，另有 1 筆 Airbnb 訂房等待確認。</div><button class="btn-quiet" type="button" data-action="查看待辦">查看待辦 <span aria-hidden="true">→</span></button></div>
+      <section class="metric-grid" aria-label="營運摘要"><article class="metric-card"><div class="metric-top"><span>今日入住</span><span class="metric-icon mint"><svg class="icon-sm"><use href="#i-bed"></use></svg></span></div><div class="metric-value">08 <small style="font-family:var(--font);font-size:12px;letter-spacing:0">間</small></div><div class="metric-foot"><span class="trend-up">↑ 2 間</span><span>較昨日</span><span class="scope-text">共 24 間可售</span></div></article><article class="metric-card"><div class="metric-top"><span>今日退房</span><span class="metric-icon blue"><svg class="icon-sm"><use href="#i-calendar"></use></svg></span></div><div class="metric-value">05 <small style="font-family:var(--font);font-size:12px;letter-spacing:0">間</small></div><div class="metric-foot"><span>最晚 12:00</span><span class="scope-text">3 間待清潔</span></div></article><article class="metric-card"><div class="metric-top"><span>本月營收</span><span class="metric-icon mint"><svg class="icon-sm"><use href="#i-chart"></use></svg></span></div><div class="metric-value">284,500</div><div class="metric-foot"><span class="trend-up">↑ 8.4%</span><span>較上月同期</span><span class="scope-text">NT$</span></div></article><article class="metric-card"><div class="metric-top"><span>待處理案件</span><span class="metric-icon coral"><svg class="icon-sm"><use href="#i-wrench"></use></svg></span></div><div class="metric-value">07 <small style="font-family:var(--font);font-size:12px;letter-spacing:0">件</small></div><div class="metric-foot"><span class="trend-warn">2 件高優先</span><span class="scope-text">含 1 件維修</span></div></article></section>
 
-      <!-- Bottom Detail Row -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div class="card">
-        <div class="flex items-center justify-between mb-3">
-          <div class="font-bold text-base">快速操作</div>
-          <a class="text-xs text-ink-600">全部 →</a>
-        </div>
-        <div class="space-y-1">
-          <div class="quick-action">
-            <div class="icon bg-mint-100 text-mint-700">＋</div>
-            <div class="flex-1">
-              <div class="text font-semibold text-sm">新增記錄</div>
-              <div class="text-xs text-ink-600">快速建立新項目</div>
-            </div>
-          </div>
-          <div class="quick-action">
-            <div class="icon bg-blue-100 text-blue">📋</div>
-            <div class="flex-1">
-              <div class="text font-semibold text-sm">匯出報表</div>
-              <div class="text-xs text-ink-600">PDF / Excel / CSV</div>
-            </div>
-          </div>
-          <div class="quick-action">
-            <div class="icon bg-yellow-100 text-warn">⚡</div>
-            <div class="flex-1">
-              <div class="text font-semibold text-sm">批次處理</div>
-              <div class="text-xs text-ink-600">一次處理多筆</div>
-            </div>
-          </div>
-          <div class="quick-action">
-            <div class="icon bg-red-100 text-danger">🔔</div>
-            <div class="flex-1">
-              <div class="text font-semibold text-sm">通知設定</div>
-              <div class="text-xs text-ink-600">管理提醒規則</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="flex items-center justify-between mb-3">
-          <div class="font-bold text-base">本月行程</div>
-          <div class="text-xs text-ink-600">9 / 2026</div>
-        </div>
-        <div class="grid grid-cols-7 gap-1 text-xs text-center mb-1 text-ink-600">
-          <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
-        </div>
-        <div class="grid grid-cols-7 gap-1 text-xs text-center">
-          <div class="py-1.5 text-ink-400">1</div>
-          <div class="py-1.5 text-ink-400">2</div>
-          <div class="py-1.5">3</div>
-          <div class="py-1.5">4</div>
-          <div class="py-1.5 bg-mint-100 text-mint-700 rounded font-semibold">5</div>
-          <div class="py-1.5">6</div>
-          <div class="py-1.5">7</div>
-          <div class="py-1.5">8</div>
-          <div class="py-1.5">9</div>
-          <div class="py-1.5">10</div>
-          <div class="py-1.5">11</div>
-          <div class="py-1.5">12</div>
-          <div class="py-1.5">13</div>
-          <div class="py-1.5">14</div>
-          <div class="py-1.5 bg-blue text-white rounded font-semibold">15</div>
-          <div class="py-1.5">16</div>
-          <div class="py-1.5">17</div>
-          <div class="py-1.5">18</div>
-          <div class="py-1.5">19</div>
-          <div class="py-1.5">20</div>
-          <div class="py-1.5">21</div>
-          <div class="py-1.5 bg-mint-100 text-mint-700 rounded">22</div>
-          <div class="py-1.5">23</div>
-          <div class="py-1.5">24</div>
-          <div class="py-1.5">25</div>
-          <div class="py-1.5">26</div>
-          <div class="py-1.5">27</div>
-          <div class="py-1.5">28</div>
-          <div class="py-1.5">29</div>
-          <div class="py-1.5">30</div>
-        </div>
-        <div class="mt-3 pt-3 border-t border-line space-y-2 text-xs">
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-mint-500"></span><span>09:00 站會</span></div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue"></span><span>14:00 客戶會議</span></div>
-          <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-warn"></span><span>17:30 截止繳交</span></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="flex items-center justify-between mb-3">
-          <div class="font-bold text-base">最近動態</div>
-          <a class="text-xs text-ink-600">查看全部 →</a>
-        </div>
-        <div class="space-y-0">
-          <div class="timeline-item">
-            <div class="timeline-dot bg-mint-500"></div>
-            <div class="flex-1 text-sm">
-              <div class="font-medium">新客戶完成首次預約</div>
-              <div class="text-xs text-ink-600 mt-0.5">5 分鐘前 · 系統自動</div>
-            </div>
-          </div>
-          <div class="timeline-item">
-            <div class="timeline-dot bg-blue"></div>
-            <div class="flex-1 text-sm">
-              <div class="font-medium">報表匯出完成</div>
-              <div class="text-xs text-ink-600 mt-0.5">1 小時前 · PDF 1.2MB</div>
-            </div>
-          </div>
-          <div class="timeline-item">
-            <div class="timeline-dot bg-warn"></div>
-            <div class="flex-1 text-sm">
-              <div class="font-medium">待辦提醒：3 件將到期</div>
-              <div class="text-xs text-ink-600 mt-0.5">3 小時前 · 提醒中心</div>
-            </div>
-          </div>
-          <div class="timeline-item">
-            <div class="timeline-dot bg-ink-400"></div>
-            <div class="flex-1 text-sm">
-              <div class="font-medium">系統備份完成</div>
-              <div class="text-xs text-ink-600 mt-0.5">昨天 23:00 · 排程任務</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
+      <div class="grid-main"><section class="card occupancy-card"><div class="card-header"><div><div class="card-title">房況總覽</div><div class="card-subtitle">用房號掌握今天的入住、退房與清潔狀態</div></div><div class="segmented" role="group" aria-label="物業範圍"><button class="segment active" type="button" data-scope="全部物業">全部</button><button class="segment" type="button" data-scope="中山館">中山館</button><button class="segment" type="button" data-scope="逢甲館">逢甲館</button></div></div><div class="card-body"><div class="occupancy-summary"><div><div class="occupancy-rate">75%</div><div class="occupancy-label">今日入住率 · 18 / 24 間</div></div><div class="mini-stat"><strong>08</strong><span>入住</span></div><div class="mini-stat"><strong>05</strong><span>退房</span></div><div class="mini-stat"><strong>02</strong><span>空房</span></div></div><div class="room-group"><div class="room-group-heading"><strong data-property-group>中山館 <span style="color:var(--muted);font-weight:400">· 台北市中山區</span></strong><span>8 間房</span></div><div class="room-grid"><button class="room occupied" type="button" data-action="查看房間 101"><span class="room-id">101 · 套房</span><span class="room-state">已入住</span></button><button class="room checkout" type="button" data-action="查看房間 102"><span class="room-id">102 · 套房</span><span class="room-state">今日退房</span></button><button class="room occupied" type="button" data-action="查看房間 201"><span class="room-id">201 · 雅房</span><span class="room-state">已入住</span></button><button class="room cleaning" type="button" data-action="查看房間 202"><span class="room-id">202 · 雅房</span><span class="room-state">待清潔</span></button><button class="room maintenance" type="button" data-action="查看房間 208"><span class="room-id">208 · 套房</span><span class="room-state">維修中</span></button><button class="room available" type="button" data-action="查看房間 301"><span class="room-id">301 · 套房</span><span class="room-state">空房</span></button></div></div><div class="room-group"><div class="room-group-heading"><strong>逢甲館 <span style="color:var(--muted);font-weight:400">· 台中市西屯區</span></strong><span>6 間房</span></div><div class="room-grid"><button class="room occupied" type="button" data-action="查看房間 A01"><span class="room-id">A01 · 整層</span><span class="room-state">已入住</span></button><button class="room occupied" type="button" data-action="查看房間 A02"><span class="room-id">A02 · 整層</span><span class="room-state">已入住</span></button><button class="room checkout" type="button" data-action="查看房間 B01"><span class="room-id">B01 · 套房</span><span class="room-state">今日退房</span></button><button class="room occupied" type="button" data-action="查看房間 B02"><span class="room-id">B02 · 套房</span><span class="room-state">已入住</span></button><button class="room available" type="button" data-action="查看房間 C01"><span class="room-id">C01 · 雅房</span><span class="room-state">空房</span></button><button class="room available" type="button" data-action="查看房間 C02"><span class="room-id">C02 · 雅房</span><span class="room-state">空房</span></button></div></div><div class="room-legend"><span class="legend occupied">已入住</span><span class="legend checkout">今日退房</span><span class="legend cleaning">待清潔</span><span class="legend maintenance">維修中</span></div></div></section>
+        <section class="card"><div class="card-header"><div><div class="card-title">今日營運</div><div class="card-subtitle">依時間排列的入住與現場工作</div></div><button class="btn-quiet" type="button" data-action="查看行程">完整行程 →</button></div><div class="timeline"><div class="timeline-item"><div class="timeline-time">09:00</div><div class="timeline-dot"></div><div><div class="timeline-title">退房檢查 · 102 房 <span class="timeline-pill blue">退房</span></div><div class="timeline-meta">王小姐 · 中山館</div></div></div><div class="timeline-item"><div class="timeline-time">10:30</div><div class="timeline-dot amber"></div><div><div class="timeline-title">清潔排程 · 202、208 房 <span class="timeline-pill amber">待派工</span></div><div class="timeline-meta">阿宏清潔 · 預計 11:30 完成</div></div></div><div class="timeline-item"><div class="timeline-time">14:00</div><div class="timeline-dot"></div><div><div class="timeline-title">入住 · 301 房 <span class="timeline-pill">入住</span></div><div class="timeline-meta">陳先生 · Airbnb · 2 晚</div></div></div><div class="timeline-item"><div class="timeline-time">16:30</div><div class="timeline-dot coral"></div><div><div class="timeline-title">維修到場 · 208 房 <span class="timeline-pill coral">高優先</span></div><div class="timeline-meta">冷氣異音 · 林師傅</div></div></div></div></section></div>
 
-      <!-- Footer -->
-      <footer class="mt-12 pt-6 border-t border-line text-xs text-ink-600 flex items-center justify-between">
-        <div>Hotel Pm Pro · hotel-pm commercial version</div>
-        <div>Made with OpenClaw · 2026-09-06</div>
-      </footer>
-    </div>
-  </main>
+      <section class="card workbench"><div class="card-header"><div><div class="card-title">待辦工作台</div><div class="card-subtitle">把會影響入住體驗的工作排在前面</div></div><div class="filter-row"><select class="filter" aria-label="案件篩選"><option>全部狀態</option><option>待處理</option><option>進行中</option><option>已完成</option></select><select class="filter" aria-label="物業篩選"><option>全部物業</option><option>中山館</option><option>逢甲館</option></select><button class="btn-quiet" type="button" data-action="查看全部待辦">查看全部 →</button></div></div><div class="table-wrap"><table><thead><tr><th>案件</th><th>物業 / 房號</th><th>優先級</th><th>負責人</th><th>截止時間</th><th>狀態</th></tr></thead><tbody><tr><td><div class="task-title">冷氣異音檢查</div><div class="task-meta">維修 · 建立於 08:20</div></td><td>中山館 / 208</td><td><span class="priority high">● 高</span></td><td><span class="assignee"><span class="assignee-avatar">林</span>林師傅</span></td><td>今天 16:30</td><td><span class="status progress">進行中</span></td></tr><tr><td><div class="task-title">退房後清潔與備品</div><div class="task-meta">清潔 · 建立於昨天</div></td><td>中山館 / 202</td><td><span class="priority medium">● 中</span></td><td><span class="assignee"><span class="assignee-avatar">阿</span>阿宏清潔</span></td><td>今天 12:00</td><td><span class="status todo">待處理</span></td></tr><tr><td><div class="task-title">確認入住資訊</div><div class="task-meta">訂房 · Airbnb #A-4821</div></td><td>逢甲館 / B01</td><td><span class="priority medium">● 中</span></td><td><span class="assignee"><span class="assignee-avatar">怡</span>怡君</span></td><td>今天 18:00</td><td><span class="status todo">待處理</span></td></tr><tr><td><div class="task-title">補充浴室備品</div><div class="task-meta">巡檢 · 建立於昨天</div></td><td>逢甲館 / A02</td><td><span class="priority low">● 低</span></td><td><span class="assignee"><span class="assignee-avatar">小</span>小美</span></td><td>明天 10:00</td><td><span class="status done">已完成</span></td></tr></tbody></table></div><div class="table-footer"><span>顯示 4 / 7 件待辦</span><button class="btn-quiet" type="button" data-action="查看全部待辦">管理待辦清單 →</button></div></section>
 
-  <!-- Mobile Bottom Nav -->
-  <nav class="mobile-nav">
-    <button><span>🏠</span><span>首頁</span></button>
-      <button><span>🛏️</span><span>房況總覽</span></button>
-      <button><span>📅</span><span>訂單管理</span></button>
-      <button><span>👤</span><span>住客資料</span></button>
-  </nav>
-
-<script>
-  // Sidebar nav click handler
-  document.querySelectorAll('.sidebar-item').forEach(item => {
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-    });
-  });
-  // Quick actions demo
-  document.querySelectorAll('.quick-action').forEach(item => {
-    item.addEventListener('click', () => {
-      const title = item.querySelector('.text')?.textContent || '動作';
-      const toast = document.createElement('div');
-      toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1A1A1A;color:white;padding:10px 20px;border-radius:10px;font-size:13px;z-index:1000;box-shadow:0 10px 30px rgba(0,0,0,0.2)';
-      toast.textContent = '✓ ' + title + ' 已觸發';
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2000);
-    });
-  });
-  // Notify
-  document.getElementById('btn-notify')?.addEventListener('click', () => {
-    alert('🔔 通知中心\n\n目前沒有新通知。');
-  });
-</script>
+      <div class="grid-bottom"><section class="card"><div class="card-header"><div><div class="card-title">營收趨勢</div><div class="card-subtitle">近 6 個月訂房與長租收入</div></div><button class="btn-quiet" type="button" data-action="開啟月報">月報中心 →</button></div><div class="chart-area"><div class="chart-y"><span>40萬</span><span>30萬</span><span>20萬</span><span>10萬</span><span>0</span></div><div class="chart"><div class="bar-group"><span class="bar" style="height:55%"></span><span class="bar" style="height:38%"></span><span class="bar-label">4月</span></div><div class="bar-group"><span class="bar" style="height:63%"></span><span class="bar" style="height:48%"></span><span class="bar-label">5月</span></div><div class="bar-group"><span class="bar" style="height:49%"></span><span class="bar" style="height:62%"></span><span class="bar-label">6月</span></div><div class="bar-group"><span class="bar" style="height:70%"></span><span class="bar" style="height:58%"></span><span class="bar-label">7月</span></div><div class="bar-group"><span class="bar" style="height:63%"></span><span class="bar" style="height:76%"></span><span class="bar-label">8月</span></div><div class="bar-group"><span class="bar current" style="height:82%"></span><span class="bar current" style="height:64%"></span><span class="bar-label">9月</span></div></div></div><div class="chart-note"><span><span class="chart-legend">本月總營收</span></span><strong>NT$ 284,500 <span style="font-family:var(--font);font-size:10px;color:var(--mint);margin-left:5px">+8.4%</span></strong></div></section><section class="card"><div class="card-header"><div><div class="card-title">物業表現</div><div class="card-subtitle">本月營收與入住率</div></div><button class="btn-quiet" type="button" data-action="查看物業">物業管理 →</button></div><div class="property-list"><div class="property-row"><div><div class="property-row-title">中山館</div><div class="property-row-meta">8 間房 · 房東分潤 80%</div><div class="progress"><span style="width:84%"></span></div></div><div class="property-value">NT$ 168,200<span>入住率 84%</span></div></div><div class="property-row"><div><div class="property-row-title">逢甲館</div><div class="property-row-meta">6 間房 · 房東分潤 70%</div><div class="progress"><span style="width:68%"></span></div></div><div class="property-value">NT$ 116,300<span>入住率 68%</span></div></div><div class="property-row"><div><div class="property-row-title">合計 / 平均</div><div class="property-row-meta">14 間房 · 2 個物業</div></div><div class="property-value">75%<span>平均入住率</span></div></div></div></section></div>
+      <section class="quick-actions" aria-label="快速動作"><button class="quick-action" type="button" data-action="新增訂房"><span class="quick-action-icon"><svg class="icon-sm"><use href="#i-plus"></use></svg></span><span class="quick-action-copy"><span class="quick-action-title">新增訂房</span><span class="quick-action-hint">手動建立預約</span></span></button><button class="quick-action" type="button" data-action="建立維修"><span class="quick-action-icon"><svg class="icon-sm"><use href="#i-wrench"></use></svg></span><span class="quick-action-copy"><span class="quick-action-title">建立維修</span><span class="quick-action-hint">派工並追蹤進度</span></span></button><button class="quick-action" type="button" data-action="同步 ICS"><span class="quick-action-icon"><svg class="icon-sm"><use href="#i-sync"></use></svg></span><span class="quick-action-copy"><span class="quick-action-title">同步 ICS</span><span class="quick-action-hint">更新外部行事曆</span></span></button><button class="quick-action" type="button" data-action="匯出月報"><span class="quick-action-icon"><svg class="icon-sm"><use href="#i-download"></use></svg></span><span class="quick-action-copy"><span class="quick-action-title">匯出月報</span><span class="quick-action-hint">給房東 / 會計師</span></span></button></section></div>
+      <nav class="mobile-nav" aria-label="手機導覽"><button class="active" type="button" data-page="總覽"><svg><use href="#i-grid"></use></svg><span>總覽</span></button><button type="button" data-page="房況總覽"><svg><use href="#i-bed"></use></svg><span>房況</span></button><button type="button" data-page="訂房管理"><svg><use href="#i-calendar"></use></svg><span>訂房</span></button><button type="button" data-page="維修與待辦"><svg><use href="#i-wrench"></use></svg><span>待辦</span></button></nav></main></div>
+  <div class="toast" role="status" aria-live="polite" data-toast></div><div class="modal-backdrop" data-modal-backdrop><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-header"><div><h2 class="modal-title" id="modal-title">新增訂房</h2><p class="modal-copy" data-modal-copy>這是原型互動，尚未連接後端。</p></div><button class="modal-close" type="button" data-modal-close aria-label="關閉"><svg class="icon-sm"><use href="#i-close"></use></svg></button></div><form data-demo-form><div class="form-row"><div class="form-field"><label for="guest">房客姓名</label><input id="guest" placeholder="例如：陳先生" /></div><div class="form-field"><label for="room">房號</label><select id="room"><option>301 · 中山館</option><option>B01 · 逢甲館</option><option>102 · 中山館</option></select></div></div><div class="form-row"><div class="form-field"><label for="checkin">入住日期</label><input id="checkin" type="date" value="2026-09-21" /></div><div class="form-field"><label for="checkout">退房日期</label><input id="checkout" type="date" value="2026-09-23" /></div></div><div class="modal-actions"><button class="btn btn-secondary" type="button" data-modal-close>取消</button><button class="btn btn-primary" type="submit">儲存示意</button></div></form></div></div>
+  <script>
+    const toast=document.querySelector('[data-toast]');const modalBackdrop=document.querySelector('[data-modal-backdrop]');const modalTitle=document.querySelector('[data-modal-backdrop] .modal-title');const modalCopy=document.querySelector('[data-modal-copy]');let toastTimer;
+    function showToast(message){toast.textContent='✓  '+message;toast.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('visible'),2300)}
+    function openModal(action){modalTitle.textContent=action;modalCopy.textContent=action==='新增訂房'?'填寫示意資料，確認營運流程與欄位層級。':'這是原型互動，尚未連接後端；正式版會導向對應功能。';modalBackdrop.classList.add('open')}
+    function closeModal(){modalBackdrop.classList.remove('open')}
+    document.querySelectorAll('[data-action]').forEach(button=>button.addEventListener('click',()=>{const action=button.dataset.action;if(action==='新增訂房')openModal(action);else showToast(action+'：原型互動已觸發')}));document.querySelectorAll('[data-modal-close]').forEach(button=>button.addEventListener('click',closeModal));modalBackdrop.addEventListener('click',event=>{if(event.target===modalBackdrop)closeModal()});document.querySelector('[data-demo-form]').addEventListener('submit',event=>{event.preventDefault();closeModal();showToast('已建立訂房示意，正式版會寫入訂房看板')});
+    document.querySelectorAll('.nav-item,.mobile-nav button').forEach(item=>item.addEventListener('click',()=>{const page=item.dataset.page;document.querySelectorAll('.nav-item,.mobile-nav button').forEach(nav=>nav.classList.toggle('active',nav.dataset.page===page));document.querySelector('[data-breadcrumb]').textContent=page;document.querySelector('[data-page-title]').textContent=page==='總覽'?'早安，怡君。今天有 7 件事要處理':page+' · 這是功能預覽';showToast('已切換至「'+page+'」');document.body.classList.remove('sidebar-open')}));
+    document.querySelectorAll('[data-scope]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-scope]').forEach(scope=>scope.classList.remove('active'));button.classList.add('active');const scope=button.dataset.scope;document.querySelector('[data-scope-label]').textContent=scope;document.querySelector('[data-scope-inline]').textContent='目前為'+scope;showToast('已切換至「'+scope+'」')}));document.querySelector('[data-property-trigger]').addEventListener('click',()=>showToast('請使用房況卡片上的物業篩選切換範圍'));document.querySelector('[data-notify]').addEventListener('click',()=>showToast('通知中心：目前有 2 則需要留意的訊息'));document.querySelector('[data-menu-toggle]').addEventListener('click',()=>document.body.classList.toggle('sidebar-open'));
+  </script>
 </body>
 </html>

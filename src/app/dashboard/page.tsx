@@ -1,226 +1,302 @@
-// app/dashboard/page.tsx — 受保護的 dashboard
+// app/dashboard/page.tsx — Operations Dashboard (rewrite)
+// AC: A1–A4, B1–B4, C1–C8, D1–D7, E1–E7
 "use client";
-import { useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { AppNav } from "@/components/AppNav";
 
-interface Property {
-  id: string;
-  name: string;
-  address: string;
-  roomType: string;
-  area: number | null;
-  monthlyRent: number;
-  ownerShare: number;
-  _count?: { tenants: number; bookings: number };
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { MobileBottomNav } from "@/components/dashboard/MobileBottomNav";
+import { AlertStrip } from "@/components/dashboard/AlertStrip";
+import { KpiStrip } from "@/components/dashboard/KpiStrip";
+import { RoomGrid } from "@/components/dashboard/RoomGrid";
+import { TodayTimeline } from "@/components/dashboard/TodayTimeline";
+import { Workbench } from "@/components/dashboard/Workbench";
+import { RevenueChart } from "@/components/dashboard/RevenueChart";
+import { PropertyPerformanceList } from "@/components/dashboard/PropertyPerformance";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { IconMenu, IconRefresh } from "@/components/dashboard/icons";
+
+import type { DashboardSummary } from "@/components/dashboard/types";
+
+function useQueryString() {
+  const searchParams = useSearchParams();
+  const propertyId = searchParams.get("propertyId");
+  return propertyId && propertyId.length > 0 ? propertyId : null;
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", address: "", roomType: "整層", area: "", monthlyRent: "", ownerShare: "80" });
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login");
-    } else if (status === "authenticated") {
-      loadProperties();
-    }
-  }, [status, router]);
-
-  async function loadProperties() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/properties");
-      const data = await res.json();
-      setProperties(data.properties ?? []);
-    } catch (err) {
-      setError("載入失敗");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    try {
-      const res = await fetch("/api/properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          area: form.area ? Number(form.area) : null,
-          monthlyRent: Number(form.monthlyRent),
-          ownerShare: Number(form.ownerShare),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "新增失敗");
-        return;
-      }
-      setForm({ name: "", address: "", roomType: "整層", area: "", monthlyRent: "", ownerShare: "80" });
-      setShowAdd(false);
-      loadProperties();
-    } catch (err) {
-      setError("新增失敗");
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm("確定要刪除此物業嗎？")) return;
-    try {
-      const res = await fetch(`/api/properties/${id}`, { method: "DELETE" });
-      if (res.ok) loadProperties();
-    } catch (err) {
-      setError("刪除失敗");
-    }
-  }
-
-  if (status === "loading" || loading) {
-    return <div className="min-h-screen flex items-center justify-center">載入中...</div>;
-  }
-
-  const totalMonthlyRent = properties.reduce((sum, p) => sum + p.monthlyRent, 0);
-  const totalProperties = properties.length;
-  const tier = (session?.user as any)?.tier ?? "free";
-
+  // Next.js 16 requires useSearchParams() callers to be wrapped in a Suspense
+  // boundary so that prerendering can bail out cleanly. Inner page body lives
+  // in <DashboardInner /> below.
   return (
-    <div className="min-h-screen">
-      {/* Nav */}
-      <header className="border-b border-[var(--border)]">
+    <Suspense fallback={<DashboardLoadingShell />}>
+      <DashboardInner />
+    </Suspense>
+  );
+}
+
+function DashboardLoadingShell() {
+  return (
+    <div className="ops-shell" data-testid="ops-dashboard">
+      <header className="ops-topbar border-b border-[var(--border)]">
         <div className="container-page flex items-center justify-between py-4">
           <Link href="/" className="text-lg font-semibold">
             <span className="gradient-text">民宿管家</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-[var(--text-secondary)]">
+          <span className="muted text-sm">載入中…</span>
+        </div>
+      </header>
+      <main className="ops-main container-page py-8" aria-label="營運總覽">
+        <DashboardSkeleton />
+      </main>
+    </div>
+  );
+}
+
+function DashboardInner() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const propertyId = useQueryString();
+
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Session guard (D1) — preserve existing redirect-to-login behavior
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  // Single source of truth (D2/D3): fetch /api/dashboard/summary only.
+  // Property switcher reads the `properties` field of the same response,
+  // so the dashboard never re-queries /api/properties, /api/bookings,
+  // /api/requirements, /api/maintenance, or /api/reports/monthly.
+  const loadSummary = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const qs = propertyId ? `?propertyId=${encodeURIComponent(propertyId)}` : "";
+      const res = await fetch(`/api/dashboard/summary${qs}`, {
+        cache: "no-store",
+      });
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(`伺服器回應 ${res.status}`);
+      }
+      const data: DashboardSummary = await res.json();
+      setSummary(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "載入失敗");
+    } finally {
+      setLoading(false);
+    }
+  }, [propertyId, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    loadSummary();
+  }, [status, propertyId, loadSummary]);
+
+  // Convenience derived list (always read from summary; empty until first fetch)
+  const properties = summary?.properties ?? [];
+
+  const tier = (session?.user as { tier?: string } | undefined)?.tier ?? "free";
+
+  const propertyNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of properties) map[p.id] = p.name;
+    return map;
+  }, [properties]);
+
+  const activePropertyName = propertyId
+    ? properties.find((p) => p.id === propertyId)?.name ?? null
+    : null;
+
+  const initialLoading = status === "loading";
+  const showSkeleton = initialLoading || (loading && !summary && !error);
+
+  return (
+    <div className="ops-shell" data-testid="ops-dashboard">
+      {/* Existing top header (AC §A4 — preserved verbatim, no duplication) */}
+      <header className="ops-topbar border-b border-[var(--border)]">
+        <div className="container-page flex items-center justify-between py-4 gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="text-lg font-semibold shrink-0">
+              <span className="gradient-text">民宿管家</span>
+            </Link>
+            <span className="ops-breadcrumb shrink-0">
+              <span aria-hidden="true">/</span> 總覽
+            </span>
+            {activePropertyName && (
+              <span
+                className="ops-scope-chip"
+                aria-label={`目前管理範圍：${activePropertyName}`}
+                title={activePropertyName}
+              >
+                {activePropertyName}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-sm text-[var(--text-secondary)] truncate max-w-[180px]">
               {session?.user?.email}
             </span>
             <span className="text-xs px-2 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] font-semibold">
               {tier}
             </span>
             {tier === "free" && (
-              <Link href="/pricing" className="btn-primary text-sm">升級</Link>
+              <Link href="/pricing" className="btn-primary text-sm">
+                升級
+              </Link>
             )}
-            <button onClick={() => signOut({ callbackUrl: "/" })} className="btn-ghost text-sm">登出</button>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="btn-ghost text-sm"
+              aria-label="登出"
+            >
+              登出
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="container-page py-8">
-        <AppNav />
+      {/* Body: desktop = sidebar + main; mobile = main only */}
+      <div className="ops-body">
+        <Sidebar properties={properties} activePropertyId={propertyId} />
 
-        {/* KPI */}
-        <div className="grid gap-4 sm:grid-cols-3 mb-8">
-          <div className="card">
-            <div className="text-sm text-[var(--text-secondary)]">物業總數</div>
-            <div className="text-3xl font-bold mt-1">{totalProperties}</div>
+        <main className="ops-main container-page py-8" aria-label="營運總覽">
+          <div className="ops-page-heading">
+            <div>
+              <p className="eyebrow">Operations</p>
+              <h1 className="ops-title">營運總覽</h1>
+              <p className="ops-description">
+                今天的入住、退房、清潔、維修、本月營收與物業表現。
+              </p>
+            </div>
+            <div className="ops-heading-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => loadSummary()}
+                aria-label="重新整理總覽"
+                disabled={loading}
+              >
+                <span aria-hidden="true">
+                  <IconRefresh />
+                </span>
+                重新整理
+              </button>
+            </div>
           </div>
-          <div className="card">
-            <div className="text-sm text-[var(--text-secondary)]">月租金總額</div>
-            <div className="text-3xl font-bold mt-1">NT$ {totalMonthlyRent.toLocaleString()}</div>
-          </div>
-          <div className="card">
-            <div className="text-sm text-[var(--text-secondary)]">方案</div>
-            <div className="text-3xl font-bold mt-1 capitalize">{tier}</div>
-          </div>
-        </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">我的物業</h1>
-          <button onClick={() => setShowAdd(!showAdd)} className="btn-primary">
-            {showAdd ? "取消" : "+ 新增物業"}
-          </button>
-        </div>
+          {/* Loading skeleton */}
+          {showSkeleton && <DashboardSkeleton />}
 
-        {error && (
-          <div className="mb-4 p-3 rounded-md bg-[var(--danger)]/10 border border-[var(--danger)]/30 text-sm text-[var(--danger)]">
-            {error}
-          </div>
-        )}
+          {/* Error state */}
+          {!showSkeleton && error && (
+            <div className="ops-error" role="alert">
+              <div className="ops-error-copy">
+                <strong>無法載入總覽</strong>
+                <span className="muted">{error}</span>
+              </div>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => loadSummary()}
+              >
+                重試
+              </button>
+            </div>
+          )}
 
-        {/* Add form */}
-        {showAdd && (
-          <form onSubmit={handleAdd} className="card mb-6 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="label">名稱</label>
-              <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          {/* Empty state — no properties at all */}
+          {!showSkeleton && !error && summary && properties.length === 0 && (
+            <div className="ops-empty" role="status">
+              <h2 className="ops-empty-title">還沒有任何物業</h2>
+              <p className="ops-empty-copy">
+                建立第一個物業後，總覽就會自動顯示今天的入住、退房、營收與待辦。
+              </p>
+              <Link href="/dashboard/properties" className="btn-primary">
+                新增第一個物業
+              </Link>
             </div>
-            <div>
-              <label className="label">地址</label>
-              <input className="input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
-            </div>
-            <div>
-              <label className="label">房型</label>
-              <select className="input" value={form.roomType} onChange={(e) => setForm({ ...form, roomType: e.target.value })}>
-                <option>整層</option>
-                <option>套房</option>
-                <option>雅房</option>
-              </select>
-            </div>
-            <div>
-              <label className="label">坪數</label>
-              <input className="input" type="number" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
-            </div>
-            <div>
-              <label className="label">月租金 (NT$)</label>
-              <input className="input" type="number" value={form.monthlyRent} onChange={(e) => setForm({ ...form, monthlyRent: e.target.value })} required />
-            </div>
-            <div>
-              <label className="label">房東分潤 (%)</label>
-              <input className="input" type="number" min="0" max="100" value={form.ownerShare} onChange={(e) => setForm({ ...form, ownerShare: e.target.value })} required />
-            </div>
-            <div className="sm:col-span-2">
-              <button type="submit" className="btn-primary">建立物業</button>
-            </div>
-          </form>
-        )}
+          )}
 
-        {/* Property list */}
-        {properties.length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-[var(--text-secondary)]">還沒有物業，點「+ 新增物業」開始</p>
-          </div>
-        ) : (
-          <div className="card overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="text-left p-3">名稱</th>
-                  <th className="text-left p-3">地址</th>
-                  <th className="text-left p-3">房型</th>
-                  <th className="text-right p-3">月租</th>
-                  <th className="text-right p-3">分潤</th>
-                  <th className="text-right p-3">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {properties.map((p) => (
-                  <tr key={p.id} className="border-b border-[var(--border)]/50">
-                    <td className="p-3 font-medium">{p.name}</td>
-                    <td className="p-3 text-[var(--text-secondary)]">{p.address}</td>
-                    <td className="p-3 text-[var(--text-secondary)]">{p.roomType}</td>
-                    <td className="p-3 text-right">NT$ {p.monthlyRent.toLocaleString()}</td>
-                    <td className="p-3 text-right">{p.ownerShare}%</td>
-                    <td className="p-3 text-right">
-                      <button onClick={() => handleDelete(p.id)} className="text-[var(--danger)] hover:underline text-sm">刪除</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </main>
+          {/* Loaded dashboard */}
+          {!showSkeleton && !error && summary && properties.length > 0 && (
+            <>
+              <AlertStrip
+                cleaning={summary.occupancy.cleaning}
+                maintenance={summary.occupancy.maintenance}
+                openCases={summary.kpi.openCases}
+              />
+              <KpiStrip
+                checkInsToday={summary.kpi.checkInsToday}
+                checkOutsToday={summary.kpi.checkOutsToday}
+                revenueMonth={summary.kpi.revenueMonth}
+                openCases={summary.kpi.openCases}
+              />
+
+              <div className="ops-grid-2">
+                <RoomGrid rooms={summary.rooms} occupancy={summary.occupancy} />
+                <TodayTimeline items={summary.timeline} />
+              </div>
+
+              <Workbench
+                items={summary.workbench}
+                propertyNameById={propertyNameById}
+              />
+
+              <div className="ops-grid-2">
+                <RevenueChart series={summary.revenueSeries} />
+                <PropertyPerformanceList
+                  rows={summary.propertyPerformance}
+                />
+              </div>
+
+              <QuickActions />
+            </>
+          )}
+        </main>
+      </div>
+
+      <MobileBottomNav />
+
+      {/* SR-only menu trigger retained for parity with prototype IA */}
+      <button type="button" className="sr-only" aria-hidden="true" tabIndex={-1}>
+        <IconMenu />
+      </button>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="ops-skeleton" aria-busy="true" aria-live="polite">
+      <div className="ops-skeleton-row skeleton-strip" />
+      <div className="ops-kpi-grid">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div className="skeleton-card" key={`kpi-${i}`} />
+        ))}
+      </div>
+      <div className="ops-grid-2">
+        <div className="skeleton-card tall" />
+        <div className="skeleton-card tall" />
+      </div>
+      <div className="skeleton-card tall" />
+      <div className="ops-grid-2">
+        <div className="skeleton-card" />
+        <div className="skeleton-card" />
+      </div>
     </div>
   );
 }
