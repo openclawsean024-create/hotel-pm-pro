@@ -14,7 +14,7 @@ export default function Home() {
             <Link href="/pricing" className="btn-ghost text-sm">定價</Link>
             <Link href="/faq" className="btn-ghost text-sm">FAQ</Link>
             <Link href="/login" className="btn-ghost text-sm">登入</Link>
-            <Link href="/register" className="btn-primary text-sm">免費試用</Link>
+            <Link href="/login" className="btn-primary text-sm">登入系統</Link>
           </nav>
         </div>
       </header>
@@ -35,7 +35,7 @@ export default function Home() {
           比 Cloudbeds 便宜 80%，比 Excel 簡單 10 倍。
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/register" className="btn-primary">免費試用 14 天</Link>
+          <Link href="/login" className="btn-primary">登入系統</Link>
           <Link href="/pricing" className="btn-secondary">看定價方案</Link>
         </div>
       </section>
@@ -94,8 +94,8 @@ export default function Home() {
       <section className="container-page py-20 text-center">
         <div className="card max-w-2xl mx-auto p-12">
           <h2 className="text-3xl font-bold">準備好了嗎？</h2>
-          <p className="mt-4 text-[var(--text-secondary)]">14 天免費試用，不需信用卡。</p>
-          <Link href="/register" className="btn-primary mt-6 inline-flex">開始免費試用</Link>
+          <p className="mt-4 text-[var(--text-secondary)]">已有帳號即可登入使用物業管理功能。</p>
+          <Link href="/login" className="btn-primary mt-6 inline-flex">前往登入</Link>
         </div>
       </section>
 
@@ -122,10 +122,9 @@ export default function Home() {
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold mb-3">登入</h4>
+            <h4 className="font-semibold mb-3">帳號</h4>
             <ul className="space-y-2 text-[var(--text-secondary)]">
               <li><Link href="/login">登入</Link></li>
-              <li><Link href="/register">註冊</Link></li>
             </ul>
           </div>
         </div>

@@ -75,7 +75,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-sm text-center text-[var(--text-secondary)]">
-          還沒有帳號？<Link href="/register" className="text-[var(--accent)] hover:underline">免費註冊</Link>
+          目前暫停開放新帳號，請使用既有帳號登入。
         </p>
         <p className="mt-2 text-sm text-center">
           <Link href="/" className="text-[var(--text-muted)] hover:text-[var(--text-secondary)]">← 回首頁</Link>

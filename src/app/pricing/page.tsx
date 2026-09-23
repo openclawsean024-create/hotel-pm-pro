@@ -17,8 +17,8 @@ export default function PricingPage() {
         "基礎 Email 客服",
         "資料本地儲存",
       ],
-      cta: "免費開始",
-      href: "/register?plan=free",
+      cta: "登入使用",
+      href: "/login",
       highlight: false,
     },
     {
@@ -61,7 +61,7 @@ export default function PricingPage() {
 
   const faqs = [
     { q: "可以隨時取消嗎？", a: "可以，Pro 與 Business 方案隨時取消，目前週期仍可使用至到期日。" },
-    { q: "有免費試用嗎？", a: "Free 方案永久免費。Pro 14 天試用，不需信用卡。" },
+    { q: "目前可以申請帳號嗎？", a: "目前暫停開放新帳號；已有帳號的使用者可以直接登入。" },
     { q: "支援哪些付款方式？", a: "支援信用卡（Visa / MasterCard / JCB）與 LINE Pay。" },
     { q: "可以升級或降級嗎？", a: "可以，隨時在帳號設定中切換方案，按比例計算費用。" },
   ];
