@@ -2766,6 +2766,27 @@ body.has-ops-shell { background: var(--canopy-canvas); }
   justify-content: center;
 }
 .landing .landing-menu-btn svg { width: 19px; height: 19px; }
+/* Skip-to-content link (WCAG 2.4.1) — visible on focus only */
+.landing .landing-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 100;
+  padding: 10px 14px;
+  color: #fff;
+  background: var(--landing-teal-2);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.landing .landing-skip-link:focus,
+.landing .landing-skip-link:focus-visible {
+  left: 12px;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 6px 18px rgba(15, 118, 110, .25);
+}
 .landing .landing-mobile-nav {
   display: none;
   position: absolute;

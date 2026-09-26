@@ -161,6 +161,11 @@ const proofChips = [
 export default function Home() {
   return (
     <div className="landing">
+      {/* Skip-to-content link for keyboard users (WCAG 2.4.1) */}
+      <a href="#top" className="landing-skip-link">
+        跳至主要內容
+      </a>
+
       {/* Topline */}
       <div className="landing-topline" role="region" aria-label="產品定位">
         <div className="landing-wrap landing-topline-inner">
@@ -644,24 +649,24 @@ export default function Home() {
           </div>
           <div>
             <h3>產品</h3>
-            <Link className="landing-footer-link" href="#workflow">
+            <a className="landing-footer-link" href="#workflow">
               怎麼工作
-            </Link>
-            <Link className="landing-footer-link" href="#features">
+            </a>
+            <a className="landing-footer-link" href="#features">
               功能
-            </Link>
+            </a>
             <Link className="landing-footer-link" href="/pricing">
               方案
             </Link>
           </div>
           <div>
             <h3>資源</h3>
-            <Link className="landing-footer-link" href="#compare">
+            <a className="landing-footer-link" href="#compare">
               定位比較
-            </Link>
-            <Link className="landing-footer-link" href="#use-cases">
+            </a>
+            <a className="landing-footer-link" href="#use-cases">
               使用情境
-            </Link>
+            </a>
             <Link className="landing-footer-link" href="/faq">
               FAQ
             </Link>
