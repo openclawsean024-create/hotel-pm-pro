@@ -1,4 +1,4 @@
-// components/dashboard/KpiStrip.tsx — 4 KPI cards, each is a Link to filtered list
+// components/dashboard/KpiStrip.tsx — KPI grid (today's pulse + monthly)
 "use client";
 
 import Link from "next/link";
@@ -9,89 +9,101 @@ import {
   IconChart,
   IconWrench,
 } from "./icons";
+import type { DashboardSummary } from "./types";
 
-type Kpi = {
+type Props = {
+  kpi: DashboardSummary["kpi"];
+  loading?: boolean;
+};
+
+export function KpiStrip({ kpi, loading }: Props) {
+  return (
+    <section className="kpi-grid" aria-label="關鍵指標">
+      <KpiCard
+        label="今日入住"
+        value={String(kpi.checkInsToday)}
+        ariaLabel={`今日入住 ${kpi.checkInsToday} 筆`}
+        href="/dashboard/bookings"
+        tone="ready"
+        icon={IconBed}
+        hint="今日 check-in 預計筆數"
+        loading={!!loading}
+      />
+      <KpiCard
+        label="今日退房"
+        value={String(kpi.checkOutsToday)}
+        ariaLabel={`今日退房 ${kpi.checkOutsToday} 筆`}
+        href="/dashboard/bookings"
+        tone="info"
+        icon={IconArrowDown}
+        hint="今日 check-out 預計筆數"
+        loading={!!loading}
+      />
+      <KpiCard
+        label="本月營收"
+        value={`NT$ ${(kpi.revenueMonth ?? 0).toLocaleString("zh-TW")}`}
+        ariaLabel={`本月營收，新台幣 ${(kpi.revenueMonth ?? 0).toLocaleString("zh-TW")} 元`}
+        href="/dashboard/reports"
+        tone="pending"
+        icon={IconChart}
+        hint="本月份 NT$ 合計"
+        loading={!!loading}
+      />
+      <KpiCard
+        label="待處理案件"
+        value={String(kpi.openCases)}
+        ariaLabel={`待處理案件 ${kpi.openCases} 件`}
+        href="/dashboard/requirements"
+        tone="blocked"
+        icon={IconWrench}
+        hint="需求單 + 派工單"
+        loading={!!loading}
+      />
+    </section>
+  );
+}
+
+function KpiCard({
+  label,
+  value,
+  ariaLabel,
+  href,
+  tone,
+  icon: Icon,
+  hint,
+  loading,
+}: {
   label: string;
   value: string;
   ariaLabel: string;
   href: string;
-  tone: "ready" | "info" | "pending" | "blocked";
-  icon: typeof IconCalendar;
-  hint?: string;
-};
-
-export function KpiStrip({
-  checkInsToday,
-  checkOutsToday,
-  revenueMonth,
-  openCases,
-}: {
-  checkInsToday: number;
-  checkOutsToday: number;
-  revenueMonth: number;
-  openCases: number;
+  tone: "orange" | "violet" | "green" | "blue" | "yellow" | "red" | "ready" | "pending" | "blocked" | "info";
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  hint: string;
+  loading: boolean;
 }) {
-  const cards: Kpi[] = [
-    {
-      label: "今日入住",
-      value: String(checkInsToday),
-      ariaLabel: `今日入住 ${checkInsToday} 筆`,
-      href: "/dashboard/bookings",
-      tone: "ready",
-      icon: IconBed,
-      hint: "比對今日 check-in",
-    },
-    {
-      label: "今日退房",
-      value: String(checkOutsToday),
-      ariaLabel: `今日退房 ${checkOutsToday} 筆`,
-      href: "/dashboard/bookings",
-      tone: "info",
-      icon: IconArrowDown,
-      hint: "比對今日 check-out",
-    },
-    {
-      label: "本月營收",
-      value: `NT$ ${revenueMonth.toLocaleString("zh-TW")}`,
-      ariaLabel: `本月營收，新台幣 ${revenueMonth.toLocaleString("zh-TW")} 元`,
-      href: "/dashboard/reports",
-      tone: "pending",
-      icon: IconChart,
-      hint: "本月份營收合計",
-    },
-    {
-      label: "待處理案件",
-      value: String(openCases),
-      ariaLabel: `待處理案件 ${openCases} 件`,
-      href: "/dashboard/requirements",
-      tone: "blocked",
-      icon: IconWrench,
-      hint: "需求單 + 派工單",
-    },
-  ];
-
+  if (loading) {
+    return <div className="skeleton-card" aria-hidden={true} />;
+  }
   return (
-    <section className="kpi-grid" aria-label="關鍵指標">
-      {cards.map((c) => (
-        <Link
-          key={c.label}
-          href={c.href}
-          className={`kpi-card tone-${c.tone}`}
-          aria-label={c.ariaLabel}
-        >
-          <div className="kpi-top">
-            <span>{c.label}</span>
-            <span className={`kpi-icon tone-${c.tone}`} aria-hidden="true">
-              <c.icon />
-            </span>
-          </div>
-          <div className="kpi-value tabular-nums">{c.value}</div>
-          <div className="kpi-foot">
-            <IconCalendar width={12} height={12} aria-hidden={true} />
-            <span>{c.hint}</span>
-          </div>
-        </Link>
-      ))}
-    </section>
+    <Link
+      href={href}
+      className="kpi-card"
+      aria-label={ariaLabel}
+    >
+      <div className="kpi-top">
+        <span style={{ fontWeight: 800, color: "var(--canopy-ink)", fontSize: 11 }}>
+          {label}
+        </span>
+        <span className={`kpi-icon tone-${tone}`} aria-hidden={true}>
+          <Icon />
+        </span>
+      </div>
+      <div className="kpi-value">{value}</div>
+      <div className="kpi-foot">
+        <IconCalendar aria-hidden={true} />
+        <span>{hint}</span>
+      </div>
+    </Link>
   );
 }

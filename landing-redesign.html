@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#102a43" />
+  <title>民宿管家｜Landing redesign prototype</title>
+  <style>
+    :root {
+      --ink: #102a43;
+      --ink-2: #24435f;
+      --muted: #687d8f;
+      --muted-2: #9badbb;
+      --canvas: #f6f8f7;
+      --paper: #ffffff;
+      --paper-2: #edf3f1;
+      --line: #dbe5e4;
+      --teal: #0f766e;
+      --teal-2: #0a5d57;
+      --teal-soft: #dff2ed;
+      --blue: #2f6f9f;
+      --blue-soft: #e5f0f8;
+      --amber: #b97819;
+      --amber-soft: #fff1d7;
+      --coral: #c9574c;
+      --coral-soft: #fee9e5;
+      --night: #102a43;
+      --night-2: #153c5a;
+      --shadow: 0 22px 60px rgba(16, 42, 67, .11);
+      --shadow-sm: 0 10px 25px rgba(16, 42, 67, .07);
+      --radius: 22px;
+      --sans: "Noto Sans TC", "PingFang TC", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; color: var(--ink); background: var(--canvas); font: 15px/1.65 var(--sans); }
+    body.modal-open { overflow: hidden; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    .wrap { width: min(1160px, calc(100% - 40px)); margin: 0 auto; }
+
+    .topline { color: #dce9ef; background: var(--night); font-size: 12px; }
+    .topline-inner { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .topline strong { color: #fff; font-weight: 800; }
+    .topline-dot { width: 6px; height: 6px; border-radius: 50%; background: #62d4ae; box-shadow: 0 0 0 4px rgba(98,212,174,.12); }
+
+    .nav { position: sticky; top: 0; z-index: 20; background: rgba(246,248,247,.88); border-bottom: 1px solid rgba(219,229,228,.8); backdrop-filter: blur(18px); }
+    .nav-inner { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 900; letter-spacing: -.04em; }
+    .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; color: #fff; background: var(--teal); border-radius: 12px; box-shadow: 0 8px 16px rgba(15,118,110,.2); }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-name { font-size: 17px; }
+    .brand-sub { display: block; color: var(--muted-2); font-size: 9px; font-weight: 800; letter-spacing: .13em; margin-top: -3px; }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-links a { padding: 9px 11px; color: var(--muted); font-size: 13px; font-weight: 750; border-radius: 10px; }
+    .nav-links a:hover { color: var(--teal-2); background: var(--teal-soft); }
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .nav-login { color: var(--ink-2); background: transparent; border: 0; font-size: 13px; font-weight: 800; }
+    .nav-login:hover { color: var(--teal); }
+    .menu-btn { display: none; width: 38px; height: 38px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+
+    .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 17px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: var(--paper); font-size: 13px; font-weight: 850; transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
+    .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+    .btn-primary { color: #fff; background: var(--teal); border-color: var(--teal); box-shadow: 0 9px 18px rgba(15,118,110,.2); }
+    .btn-primary:hover { color: #fff; background: var(--teal-2); }
+    .btn-dark { color: #fff; background: var(--night); border-color: var(--night); }
+    .btn-quiet { color: var(--teal-2); background: transparent; border: 0; padding-left: 0; padding-right: 0; }
+    .btn-quiet:hover { box-shadow: none; }
+
+    .hero { position: relative; overflow: hidden; padding: 80px 0 74px; background: linear-gradient(180deg, #f6f8f7 0%, #eef5f1 100%); }
+    .hero::before { content: ""; position: absolute; width: 560px; height: 560px; right: -160px; top: -280px; border-radius: 50%; background: rgba(104,190,161,.18); filter: blur(8px); }
+    .hero-grid { position: relative; display: grid; grid-template-columns: minmax(0, .91fr) minmax(460px, 1.09fr); gap: 66px; align-items: center; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--teal-2); font-size: 12px; font-weight: 900; letter-spacing: .08em; }
+    .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 5px var(--teal-soft); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 620px; margin: 20px 0 21px; color: var(--ink); font-size: clamp(39px, 5.1vw, 66px); line-height: 1.12; letter-spacing: -.075em; }
+    h1 em { color: var(--teal); font-style: normal; }
+    .hero-copy { max-width: 535px; color: var(--ink-2); font-size: 18px; line-height: 1.8; }
+    .hero-copy strong { color: var(--ink); }
+    .hero-actions { display: flex; align-items: center; gap: 11px; margin-top: 28px; flex-wrap: wrap; }
+    .hero-note { display: flex; flex-wrap: wrap; gap: 9px 16px; margin-top: 24px; color: var(--muted); font-size: 12px; }
+    .hero-note span { display: inline-flex; align-items: center; gap: 5px; }
+    .hero-note b { color: var(--teal); font-size: 15px; }
+
+    .product-preview { position: relative; padding: 13px; background: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.9); border-radius: 27px; box-shadow: var(--shadow); transform: rotate(1deg); }
+    .preview-window { overflow: hidden; background: #fff; border: 1px solid #d6e2e0; border-radius: 19px; }
+    .preview-bar { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; background: #fafdfc; border-bottom: 1px solid #e7efed; }
+    .preview-brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 11px; font-weight: 900; }
+    .preview-brand-mark { width: 22px; height: 22px; display: grid; place-items: center; color: #fff; background: var(--teal); border-radius: 7px; font-size: 10px; }
+    .preview-tools { display: flex; align-items: center; gap: 8px; color: var(--muted-2); font-size: 10px; }
+    .preview-user { width: 25px; height: 25px; display: grid; place-items: center; color: var(--teal-2); background: var(--teal-soft); border-radius: 50%; font-size: 10px; font-weight: 900; }
+    .preview-body { display: grid; grid-template-columns: 122px 1fr; min-height: 348px; }
+    .preview-side { padding: 17px 11px; color: #a5c0bc; background: var(--night); }
+    .side-label { padding: 0 8px; color: #6e9694; font-size: 8px; font-weight: 900; letter-spacing: .11em; }
+    .side-item { display: flex; align-items: center; gap: 7px; margin-top: 6px; padding: 8px; border-radius: 8px; font-size: 9px; }
+    .side-item.active { color: #fff; background: var(--night-2); box-shadow: inset 2px 0 #66d2b0; }
+    .side-icon { width: 15px; text-align: center; opacity: .9; }
+    .preview-main { min-width: 0; padding: 20px; background: #fff; }
+    .preview-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+    .preview-kicker { color: var(--teal); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+    .preview-title { margin-top: 3px; color: var(--ink); font-size: 18px; font-weight: 900; letter-spacing: -.05em; }
+    .preview-date { color: var(--muted-2); font: 9px var(--mono); }
+    .preview-alert { display: flex; align-items: center; gap: 7px; margin-bottom: 13px; padding: 9px 10px; color: #805515; background: var(--amber-soft); border: 1px solid #f0dbb1; border-radius: 8px; font-size: 9px; }
+    .preview-alert strong { color: #633f0a; }
+    .preview-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 13px; }
+    .preview-metric { padding: 9px; border: 1px solid #e2ebe9; border-radius: 9px; }
+    .preview-metric-label { color: var(--muted); font-size: 8px; }
+    .preview-metric-value { margin-top: 4px; color: var(--ink); font: 900 17px/1 var(--mono); letter-spacing: -.08em; }
+    .preview-metric-foot { margin-top: 4px; color: var(--teal); font-size: 7px; font-weight: 800; }
+    .preview-columns { display: grid; grid-template-columns: 1.12fr .88fr; gap: 9px; }
+    .preview-card { padding: 12px; border: 1px solid #e2ebe9; border-radius: 11px; }
+    .preview-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: var(--ink); font-size: 10px; font-weight: 900; }
+    .preview-card-head small { color: var(--teal); font-size: 8px; }
+    .event { display: grid; grid-template-columns: 34px 8px 1fr; gap: 6px; align-items: start; padding: 6px 0; border-bottom: 1px solid #eef3f1; }
+    .event:last-child { border-bottom: 0; }
+    .event-time { color: var(--muted-2); font: 8px var(--mono); }
+    .event-dot { width: 7px; height: 7px; margin-top: 4px; border: 2px solid var(--teal); border-radius: 50%; }
+    .event-dot.amber { border-color: var(--amber); }
+    .event-dot.coral { border-color: var(--coral); }
+    .event-title { color: var(--ink); font-size: 8px; font-weight: 850; }
+    .event-meta { color: var(--muted); font-size: 7px; }
+    .owner-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid #eef3f1; }
+    .owner-row:last-child { border-bottom: 0; }
+    .owner-name { color: var(--ink); font-size: 8px; font-weight: 800; }
+    .owner-meta { color: var(--muted); font-size: 7px; }
+    .owner-value { color: var(--teal-2); font: 900 9px var(--mono); }
+    .preview-caption { position: absolute; right: -22px; bottom: -22px; display: flex; align-items: center; gap: 8px; padding: 10px 13px; color: #fff; background: var(--night); border: 4px solid #eef5f1; border-radius: 13px; font-size: 10px; font-weight: 800; box-shadow: 0 10px 25px rgba(16,42,67,.17); }
+    .caption-check { width: 18px; height: 18px; display: grid; place-items: center; color: var(--night); background: #70d9b5; border-radius: 50%; font-size: 11px; }
+
+    .proof { padding: 17px 0; background: var(--paper); border-bottom: 1px solid var(--line); }
+    .proof-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .proof-label { color: var(--muted-2); font-size: 11px; font-weight: 800; }
+    .proof-list { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+    .proof-chip { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; color: var(--ink-2); background: var(--paper-2); border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .proof-chip b { color: var(--teal); }
+
+    .section { padding: 102px 0; }
+    .section.alt { background: var(--paper); }
+    .section-head { max-width: 700px; margin-bottom: 42px; }
+    .section-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+    .section-kicker { color: var(--teal); font-size: 11px; font-weight: 900; letter-spacing: .16em; }
+    h2 { margin: 11px 0 13px; color: var(--ink); font-size: clamp(29px, 4vw, 46px); line-height: 1.18; letter-spacing: -.065em; }
+    .section-lead { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.8; }
+
+    .use-case { display: grid; grid-template-columns: .82fr 1.18fr; gap: 52px; align-items: start; }
+    .tab-list { display: grid; gap: 9px; }
+    .tab { width: 100%; padding: 15px 17px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 14px; text-align: left; }
+    .tab:hover { color: var(--ink); background: var(--paper); border-color: var(--line); }
+    .tab.active { color: var(--ink); background: var(--paper); border-color: #b6d9d0; box-shadow: var(--shadow-sm); }
+    .tab-title { display: flex; align-items: center; justify-content: space-between; font-weight: 900; }
+    .tab-title span:last-child { color: var(--teal); font-size: 18px; }
+    .tab-copy { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .case-panel { min-height: 300px; padding: 29px; color: #e8f3f1; background: var(--night); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .case-panel-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .case-panel-label { color: #7edab9; font-size: 10px; font-weight: 900; letter-spacing: .13em; }
+    .case-panel-badge { padding: 5px 8px; color: #9de5c9; background: rgba(112,217,181,.12); border-radius: 999px; font-size: 9px; font-weight: 850; }
+    .case-panel h3 { max-width: 540px; margin: 23px 0 11px; color: #fff; font-size: 27px; line-height: 1.28; letter-spacing: -.06em; }
+    .case-panel p { max-width: 550px; margin-bottom: 23px; color: #abc5c5; font-size: 13px; }
+    .case-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .case-stat { padding: 13px; background: rgba(255,255,255,.07); border: 1px solid rgba(206,237,229,.13); border-radius: 13px; }
+    .case-stat strong { display: block; color: #fff; font: 900 20px var(--mono); letter-spacing: -.08em; }
+    .case-stat span { display: block; margin-top: 3px; color: #92b3b2; font-size: 10px; }
+
+    .workflow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; }
+    .workflow-card { position: relative; padding: 23px; background: var(--canvas); border: 1px solid var(--line); border-radius: 17px; }
+    .workflow-card:not(:last-child)::after { content: "→"; position: absolute; top: 32px; right: -17px; z-index: 2; color: var(--teal); font-size: 20px; font-weight: 900; }
+    .workflow-number { width: 29px; height: 29px; display: grid; place-items: center; color: var(--teal-2); background: var(--teal-soft); border-radius: 9px; font: 900 11px var(--mono); }
+    .workflow-card h3 { margin: 19px 0 8px; font-size: 15px; letter-spacing: -.03em; }
+    .workflow-card p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .compare { overflow: hidden; background: var(--night); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .compare-head { padding: 29px 30px; color: #fff; }
+    .compare-head h2 { color: #fff; margin-bottom: 8px; }
+    .compare-head p { max-width: 600px; margin: 0; color: #b3cbca; font-size: 13px; }
+    .compare-table { width: 100%; border-collapse: collapse; color: #d8e7e6; font-size: 12px; }
+    .compare-table th, .compare-table td { padding: 16px 18px; border-top: 1px solid rgba(210,237,231,.12); text-align: left; vertical-align: top; }
+    .compare-table th { color: #8fb2b0; font-size: 10px; font-weight: 850; letter-spacing: .04em; }
+    .compare-table th:last-child, .compare-table td:last-child { color: #9ee6cc; background: rgba(101,211,174,.08); }
+    .compare-table td:first-child { color: #fff; font-weight: 850; }
+    .compare-table .yes { color: #9ee6cc; }
+    .compare-table .note { color: #a8c0bf; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+    .feature-card { padding: 23px; background: var(--paper); border: 1px solid var(--line); border-radius: 17px; box-shadow: var(--shadow-sm); }
+    .feature-icon { width: 36px; height: 36px; display: grid; place-items: center; color: var(--teal-2); background: var(--teal-soft); border-radius: 11px; font-size: 17px; }
+    .feature-card:nth-child(2) .feature-icon { color: var(--blue); background: var(--blue-soft); }
+    .feature-card:nth-child(3) .feature-icon { color: var(--amber); background: var(--amber-soft); }
+    .feature-card:nth-child(4) .feature-icon { color: var(--coral); background: var(--coral-soft); }
+    .feature-card h3 { margin: 17px 0 7px; font-size: 15px; }
+    .feature-card p { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; align-items: stretch; }
+    .price-card { position: relative; display: flex; flex-direction: column; padding: 27px; background: var(--paper); border: 1px solid var(--line); border-radius: 19px; }
+    .price-card.featured { border: 2px solid var(--teal); box-shadow: 0 14px 35px rgba(15,118,110,.13); }
+    .price-badge { position: absolute; top: -12px; right: 18px; padding: 5px 10px; color: #fff; background: var(--teal); border-radius: 999px; font-size: 10px; font-weight: 900; }
+    .price-name { color: var(--muted); font-size: 12px; font-weight: 900; letter-spacing: .08em; }
+    .price-value { margin: 13px 0 4px; color: var(--ink); font: 900 31px var(--mono); letter-spacing: -.09em; }
+    .price-value small { color: var(--muted); font: 700 12px var(--sans); letter-spacing: 0; }
+    .price-desc { min-height: 43px; margin: 0; color: var(--muted); font-size: 12px; }
+    .price-list { display: grid; gap: 9px; margin: 21px 0 25px; padding: 0; list-style: none; color: var(--ink-2); font-size: 12px; }
+    .price-list li::before { content: "✓"; margin-right: 7px; color: var(--teal); font-weight: 900; }
+    .price-card .btn { width: 100%; margin-top: auto; }
+
+    .final-cta { padding: 0 0 100px; }
+    .cta-box { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 41px 47px; color: #fff; background: var(--teal-2); border-radius: 24px; }
+    .cta-box::after { content: ""; position: absolute; right: -60px; bottom: -170px; width: 400px; height: 400px; border: 1px solid rgba(255,255,255,.13); border-radius: 50%; box-shadow: 0 0 0 35px rgba(255,255,255,.04), 0 0 0 70px rgba(255,255,255,.035); }
+    .cta-box h2 { position: relative; z-index: 1; max-width: 550px; margin: 0; color: #fff; font-size: 31px; }
+    .cta-box p { position: relative; z-index: 1; margin: 8px 0 0; color: #bee2d9; font-size: 13px; }
+    .cta-actions { position: relative; z-index: 1; display: flex; flex-shrink: 0; gap: 9px; }
+    .cta-actions .btn-primary { color: var(--teal-2); background: #fff; border-color: #fff; box-shadow: none; }
+    .cta-actions .btn-primary:hover { background: #e8f7f2; }
+    .cta-actions .btn-quiet { color: #e6f5f0; border: 1px solid rgba(255,255,255,.35); padding: 0 14px; }
+
+    footer { color: #b4c8c8; background: var(--night); }
+    .footer-main { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 34px; padding: 45px 0 35px; }
+    .footer-brand { color: #fff; }
+    .footer-copy { max-width: 240px; margin: 14px 0 0; color: #8fa9aa; font-size: 12px; }
+    footer h3 { margin: 3px 0 12px; color: #fff; font-size: 12px; }
+    footer a { display: block; margin-top: 8px; color: #96b1b0; font-size: 12px; }
+    footer a:hover { color: #8de0c1; }
+    .footer-bottom { padding: 14px 0 22px; border-top: 1px solid rgba(215,242,235,.12); color: #6f8c8c; font-size: 10px; }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 40; display: none; place-items: center; padding: 20px; background: rgba(9,29,45,.54); }
+    .modal-backdrop.open { display: grid; }
+    .modal { width: min(470px, 100%); padding: 27px; background: #fff; border-radius: 19px; box-shadow: 0 30px 90px rgba(9,29,45,.3); }
+    .modal-top { display: flex; align-items: start; justify-content: space-between; gap: 15px; }
+    .modal h2 { margin: 0; font-size: 23px; }
+    .modal p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+    .modal-close { width: 31px; height: 31px; color: var(--muted); background: var(--paper-2); border: 0; border-radius: 9px; }
+    .demo-form { display: grid; gap: 12px; margin-top: 21px; }
+    .demo-form label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 800; }
+    .demo-form input, .demo-form select { width: 100%; height: 41px; padding: 0 11px; color: var(--ink); background: #fbfdfc; border: 1px solid var(--line); border-radius: 9px; outline: 0; }
+    .demo-form input:focus, .demo-form select:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-soft); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
+    @media (max-width: 980px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 43px; }
+      .hero-copy, h1 { max-width: 760px; }
+      .product-preview { max-width: 730px; margin: 0 auto; }
+      .use-case { grid-template-columns: 1fr; gap: 25px; }
+      .tab-list { grid-template-columns: repeat(3, 1fr); }
+      .workflow-grid { grid-template-columns: repeat(2, 1fr); }
+      .workflow-card:nth-child(2)::after { display: none; }
+      .feature-grid { grid-template-columns: repeat(2, 1fr); }
+      .footer-main { grid-template-columns: 1.4fr repeat(3, 1fr); }
+    }
+    @media (max-width: 720px) {
+      .wrap { width: min(100% - 30px, 560px); }
+      .topline-inner { text-align: center; }
+      .nav-inner { min-height: 65px; }
+      .menu-btn { display: grid; place-items: center; }
+      .nav-links { position: absolute; top: 65px; left: 15px; right: 15px; display: none; padding: 9px; background: rgba(255,255,255,.98); border: 1px solid var(--line); border-radius: 13px; box-shadow: var(--shadow-sm); }
+      .nav-links.open { display: grid; }
+      .nav-links a { padding: 11px; }
+      .nav-actions { margin-left: auto; }
+      .nav-login { display: none; }
+      .hero { padding: 57px 0 50px; }
+      h1 { font-size: 42px; }
+      .hero-copy { font-size: 16px; }
+      .preview-body { grid-template-columns: 1fr; }
+      .preview-side { display: none; }
+      .preview-main { padding: 15px; }
+      .preview-metrics { grid-template-columns: repeat(2, 1fr); }
+      .preview-columns { grid-template-columns: 1fr; }
+      .preview-caption { right: 10px; bottom: -18px; }
+      .proof-inner { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .proof-list { justify-content: flex-start; }
+      .section { padding: 72px 0; }
+      .tab-list, .workflow-grid, .feature-grid, .pricing-grid { grid-template-columns: 1fr; }
+      .workflow-card:not(:last-child)::after { display: none; }
+      .tab { padding: 13px 15px; }
+      .compare { overflow-x: auto; }
+      .compare-table { min-width: 650px; }
+      .cta-box { align-items: flex-start; flex-direction: column; padding: 30px 25px; }
+      .cta-box h2 { font-size: 27px; }
+      .cta-actions { width: 100%; flex-wrap: wrap; }
+      .cta-actions .btn { flex: 1; }
+      .footer-main { grid-template-columns: repeat(2, 1fr); padding-top: 35px; }
+      .footer-brand { grid-column: 1 / -1; }
+    }
+    @media (max-width: 430px) {
+      .nav-actions .btn { padding: 0 11px; font-size: 12px; }
+      .hero-actions .btn { flex: 1; }
+      .hero-actions { width: 100%; }
+      h1 { font-size: 37px; }
+      .case-panel { padding: 23px; }
+      .case-panel h3 { font-size: 23px; }
+      .case-stats { grid-template-columns: 1fr; }
+      .footer-main { gap: 24px 18px; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute">
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="m4 11 8-7 8 7v8.5A1.5 1.5 0 0 1 18.5 21h-13A1.5 1.5 0 0 1 4 19.5V11Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 21v-6h6v6" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <div class="topline"><div class="wrap topline-inner"><span class="topline-dot"></span><span><strong>為台灣小型民宿與包租代管設計</strong> · 先把今天的事處理好，再看下一間房</span></div></div>
+
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="回到首頁">
+        <span class="brand-mark"><svg><use href="#i-house" /></svg></span>
+        <span><span class="brand-name">民宿管家</span><span class="brand-sub">PROPERTY OPERATIONS</span></span>
+      </a>
+      <button class="menu-btn" type="button" data-menu-toggle aria-label="開啟導覽"><svg width="19" height="19"><use href="#i-menu" /></svg></button>
+      <nav class="nav-links" data-nav-links aria-label="主要導覽">
+        <a href="#workflow">怎麼工作</a>
+        <a href="#features">功能</a>
+        <a href="#compare">為什麼是我們</a>
+        <a href="#pricing">方案</a>
+      </nav>
+      <div class="nav-actions"><button class="nav-login" type="button" data-demo="登入系統">登入</button><button class="btn btn-primary" type="button" data-demo="免費看示範">看示範 <svg width="16" height="16"><use href="#i-arrow" /></svg></button></div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <div class="eyebrow">給每天都在處理入住、退房與報修的人</div>
+          <h1>每天先看<br /><em>該處理什麼</em>，<br />再看賺了多少。</h1>
+          <p class="hero-copy">民宿管家把物業、房客、訂房、維修與房東分帳放進同一個營運畫面。<strong>少一點 Excel 與 LINE 來回，多一點真正可掌握的營運。</strong></p>
+          <div class="hero-actions"><button class="btn btn-primary" type="button" data-scroll="workflow">看看怎麼工作 <svg width="16" height="16"><use href="#i-arrow" /></svg></button><button class="btn" type="button" data-demo="登入系統">登入系統</button></div>
+          <div class="hero-note"><span><b>✓</b> 繁中流程</span><span><b>✓</b> 房東分帳</span><span><b>✓</b> ICS 同步</span><span><b>✓</b> NT$499 起</span></div>
+        </div>
+
+        <div class="product-preview" aria-label="營運控制台視覺示範">
+          <div class="preview-window">
+            <div class="preview-bar"><div class="preview-brand"><span class="preview-brand-mark">家</span>民宿管家 <span style="color:#9badbb;font-weight:500">/ 總覽</span></div><div class="preview-tools"><span>2026 / 09 / 24</span><span class="preview-user">林</span></div></div>
+            <div class="preview-body">
+              <aside class="preview-side"><div class="side-label">營運</div><div class="side-item active"><span class="side-icon">▦</span>總覽</div><div class="side-item"><span class="side-icon">⌂</span>房況總覽</div><div class="side-label" style="margin-top:18px">管理</div><div class="side-item"><span class="side-icon">▣</span>訂房管理</div><div class="side-item"><span class="side-icon">♙</span>房客 CRM</div><div class="side-item"><span class="side-icon">⌁</span>維修與待辦</div><div class="side-label" style="margin-top:18px">財務</div><div class="side-item"><span class="side-icon">↗</span>月報與分帳</div></aside>
+              <div class="preview-main">
+                <div class="preview-heading"><div><div class="preview-kicker">THURSDAY · 09.24.2026</div><div class="preview-title">早安，怡君。今天有 7 件事</div></div><div class="preview-date">全部物業⌄</div></div>
+                <div class="preview-alert">⚠ <span><strong>先處理：</strong>208 房待清潔，1 筆訂房待確認</span></div>
+                <div class="preview-metrics"><div class="preview-metric"><div class="preview-metric-label">今日入住</div><div class="preview-metric-value">08</div><div class="preview-metric-foot">↑ 2 間</div></div><div class="preview-metric"><div class="preview-metric-label">今日退房</div><div class="preview-metric-value">05</div><div class="preview-metric-foot" style="color:#2f6f9f">最晚 12:00</div></div><div class="preview-metric"><div class="preview-metric-label">本月營收</div><div class="preview-metric-value">284K</div><div class="preview-metric-foot">↑ 8.4%</div></div><div class="preview-metric"><div class="preview-metric-label">待處理</div><div class="preview-metric-value">07</div><div class="preview-metric-foot" style="color:#c9574c">2 高優先</div></div></div>
+                <div class="preview-columns"><div class="preview-card"><div class="preview-card-head">今日營運 <small>完整行程 →</small></div><div class="event"><div class="event-time">09:00</div><div class="event-dot"></div><div><div class="event-title">退房檢查 · 102 房</div><div class="event-meta">王小姐 · 中山館</div></div></div><div class="event"><div class="event-time">10:30</div><div class="event-dot amber"></div><div><div class="event-title">清潔排程 · 202、208 房</div><div class="event-meta">阿宏清潔 · 待派工</div></div></div><div class="event"><div class="event-time">16:30</div><div class="event-dot coral"></div><div><div class="event-title">維修到場 · 208 房</div><div class="event-meta">冷氣異音 · 高優先</div></div></div></div><div class="preview-card"><div class="preview-card-head">房東分帳 <small>本月</small></div><div class="owner-row"><div><div class="owner-name">中山館</div><div class="owner-meta">林屋主 · 12 房</div></div><div class="owner-value">$82,400</div></div><div class="owner-row"><div><div class="owner-name">逢甲館</div><div class="owner-meta">陳屋主 · 8 房</div></div><div class="owner-value">$56,180</div></div><div class="owner-row"><div><div class="owner-name">待匯出報表</div><div class="owner-meta">2 份</div></div><div class="owner-value">→</div></div></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="preview-caption"><span class="caption-check">✓</span> 今天的工作，已經排好順序</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof"><div class="wrap proof-inner"><span class="proof-label">一套系統，串起每天真正會發生的事</span><div class="proof-list"><span class="proof-chip"><b>01</b> 物業與房客</span><span class="proof-chip"><b>02</b> 訂房與 ICS</span><span class="proof-chip"><b>03</b> 維修與待辦</span><span class="proof-chip"><b>04</b> 月報與分帳</span></div></div></section>
+
+    <section class="section" id="use-cases"><div class="wrap"><div class="section-head"><div class="section-kicker">A CLEARER DAY</div><h2>不同角色，看見同一套<br />不一樣的重點。</h2><p class="section-lead">不把所有功能塞在第一屏。先選你的工作情境，系統把最有用的數字與下一步放到前面。</p></div><div class="use-case"><div class="tab-list" role="tablist" aria-label="使用情境"><button class="tab active" type="button" data-case="owner" role="tab" aria-selected="true"><span class="tab-title"><span>民宿老闆</span><span>→</span></span><span class="tab-copy">今天的入住、退房與房況，有沒有漏掉？</span></button><button class="tab" type="button" data-case="manager" role="tab" aria-selected="false"><span class="tab-title"><span>包租代管營運</span><span>→</span></span><span class="tab-copy">多個物業、房東分潤與維修案件，能不能一起看？</span></button><button class="tab" type="button" data-case="finance" role="tab" aria-selected="false"><span class="tab-title"><span>財務與房東</span><span>→</span></span><span class="tab-copy">月底報表與拆帳，能不能不用重做一次？</span></button></div><div class="case-panel"><div class="case-panel-top"><span class="case-panel-label" data-case-label>OWNER VIEW · 今日營運</span><span class="case-panel-badge">Demo data only</span></div><h3 data-case-title>先把入住體驗顧好，剩下的工作自然有順序。</h3><p data-case-copy>把今天的入住、退房、待清潔與維修排成一條時間線。你不需要先翻四張表，才知道哪一件事會影響客人。</p><div class="case-stats"><div class="case-stat"><strong data-case-stat-1>08</strong><span data-case-caption-1>今日入住</span></div><div class="case-stat"><strong data-case-stat-2>05</strong><span data-case-caption-2>今日退房</span></div><div class="case-stat"><strong data-case-stat-3>07</strong><span data-case-caption-3>待處理案件</span></div></div></div></div></div></section>
+
+    <section class="section alt" id="workflow"><div class="wrap"><div class="section-head center"><div class="section-kicker">FROM CHAOS TO CONTROL</div><h2>把每天的忙，變成<br />看得懂的四個步驟。</h2><p class="section-lead">產品不追求「什麼都有」，只把小型旅宿最常重複的工作接起來。</p></div><div class="workflow-grid"><article class="workflow-card"><div class="workflow-number">01</div><h3>先看今天的房況</h3><p>入住、退房、待清潔與維修，在同一個營運總覽先排優先順序。</p></article><article class="workflow-card"><div class="workflow-number">02</div><h3>把訂房集中起來</h3><p>手動新增訂房，或用 Airbnb／Booking.com ICS 匯入並避免重複。</p></article><article class="workflow-card"><div class="workflow-number">03</div><h3>把問題交給對的人</h3><p>需求單、優先級、廠商與處理狀態，不再散落在聊天記錄裡。</p></article><article class="workflow-card"><div class="workflow-number">04</div><h3>月底直接做分帳</h3><p>用月報整理營收與房東分潤，少一次人工重算與複製貼上。</p></article></div></div></section>
+
+    <section class="section" id="compare"><div class="wrap"><div class="compare"><div class="compare-head"><div class="section-kicker">POSITIONING</div><h2>我們不和大型 PMS 比功能數量。</h2><p>大型平台強在全球分銷與擴張；台灣租賃工具強在租務自動化。民宿管家把位置放在兩者之間：用小型團隊負擔得起的方式，處理旅宿每天最關鍵的營運。</p></div><table class="compare-table"><thead><tr><th>你真正需要的</th><th>大型飯店 PMS</th><th>全球短租平台</th><th>台灣租賃工具</th><th>民宿管家</th></tr></thead><tbody><tr><td>小型民宿上手速度</td><td class="note">功能完整，導入較重</td><td class="note">偏向短租規模化</td><td class="note">偏租賃與收租</td><td class="yes">繁中、從今天開始用</td></tr><tr><td>房東分潤與月報</td><td class="note">可做，但常需設定</td><td class="note">偏 owner reporting</td><td class="note">租金帳務較強</td><td class="yes">旅宿營收＋分潤一起看</td></tr><tr><td>訂房與房務脈絡</td><td class="yes">完整</td><td class="yes">完整</td><td class="note">不是核心</td><td class="yes">保留必要的訂房／ICS／待辦</td></tr><tr><td>導入成本與產品密度</td><td class="note">企業級方案</td><td class="note">規模化方案</td><td class="note">流程彈性高</td><td class="yes">NT$499 起，聚焦 5–20 房</td></tr></tbody></table></div></div></section>
+
+    <section class="section alt" id="features"><div class="wrap"><div class="section-head center"><div class="section-kicker">THE WORKBENCH</div><h2>不只是資料庫，<br />是每天會用到的工作台。</h2><p class="section-lead">把產品價值放在「下一步」而不是「更多欄位」。</p></div><div class="feature-grid"><article class="feature-card"><div class="feature-icon">⌂</div><h3>物業與房客脈絡</h3><p>地址、房型、租約、房客與押金集中管理，換班時不用重新問一輪。</p></article><article class="feature-card"><div class="feature-icon">▣</div><h3>訂房與 ICS 匯入</h3><p>手動訂房與外部行事曆放進同一個看板，清楚知道哪間房何時被占用。</p></article><article class="feature-card"><div class="feature-icon">⌁</div><h3>維修與需求派工</h3><p>把房客反應轉成有優先級、有負責人、有完成狀態的案件。</p></article><article class="feature-card"><div class="feature-icon">↗</div><h3>月報與房東分帳</h3><p>用同一份資料整理營收、訂房數與分潤，報表可以直接交付。</p></article><article class="feature-card"><div class="feature-icon">◷</div><h3>多物業總覽</h3><p>切換單一物業或全部物業，先看例外與阻塞，不必逐館巡查。</p></article><article class="feature-card"><div class="feature-icon">✦</div><h3>繁中、低負擔</h3><p>不需要先學一套飯店術語；用台灣團隊日常說話的方式完成工作。</p></article></div></div></section>
+
+    <section class="section" id="pricing"><div class="wrap"><div class="section-head center"><div class="section-kicker">START SMALL, GROW CLEARLY</div><h2>先從一個物業開始，<br />需要時再往上長。</h2><p class="section-lead">方案沿用現有產品定位；正式上線前仍需確認實際限制與付款流程。</p></div><div class="pricing-grid"><article class="price-card"><div class="price-name">FREE</div><div class="price-value">NT$0 <small>/ 月</small></div><p class="price-desc">適合先整理一個小型物業的基本資料。</p><ul class="price-list"><li>5 房以內</li><li>物業與房客管理</li><li>月報表 PDF</li></ul><button class="btn" type="button" data-demo="開始使用 Free">開始使用</button></article><article class="price-card featured"><span class="price-badge">最適合小型團隊</span><div class="price-name">PRO</div><div class="price-value">NT$499 <small>/ 月</small></div><p class="price-desc">把訂房、ICS 與房東分帳接進每日營運。</p><ul class="price-list"><li>20 房以內</li><li>ICS 自動匯入</li><li>拆帳自動計算</li><li>Email 客服</li></ul><button class="btn btn-primary" type="button" data-demo="開始使用 Pro">開始使用 Pro</button></article><article class="price-card"><div class="price-name">BUSINESS</div><div class="price-value">NT$1,499 <small>/ 月</small></div><p class="price-desc">給需要多人協作與更大房源規模的營運團隊。</p><ul class="price-list"><li>無限房</li><li>團隊帳號</li><li>優先客服</li><li>API 串接</li></ul><button class="btn" type="button" data-demo="詢問 Business">詢問 Business</button></article></div></div></section>
+
+    <section class="final-cta"><div class="wrap"><div class="cta-box"><div><h2>你的下一個工作，應該一眼就看得到。</h2><p>先看一個完整的營運畫面，再決定要不要把資料搬進來。</p></div><div class="cta-actions"><button class="btn btn-primary" type="button" data-demo="免費看示範">免費看示範 <svg width="16" height="16"><use href="#i-arrow" /></svg></button><button class="btn btn-quiet" type="button" data-demo="登入系統">登入系統</button></div></div></div></section>
+  </main>
+
+  <footer><div class="wrap footer-main"><div class="footer-brand"><a class="brand" href="#top"><span class="brand-mark"><svg><use href="#i-house" /></svg></span><span><span class="brand-name">民宿管家</span><span class="brand-sub">PROPERTY OPERATIONS</span></span></a><p class="footer-copy">給台灣民宿與包租代管業者的繁中營運工作台。</p></div><div><h3>產品</h3><a href="#workflow">怎麼工作</a><a href="#features">功能</a><a href="#pricing">方案</a></div><div><h3>資源</h3><a href="#compare">定位比較</a><a href="#use-cases">使用情境</a><a href="#top">產品首頁</a></div><div><h3>帳號</h3><a href="#" data-demo="登入系統">登入系統</a><a href="#" data-demo="聯絡我們">聯絡我們</a></div></div><div class="wrap footer-bottom">© 2026 hotel-pm · Landing visual prototype · Demo data only</div></footer>
+
+  <div class="modal-backdrop" data-modal aria-hidden="true"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-top"><div><h2 id="modal-title">看一個完整示範</h2><p>這是視覺原型互動，不會送出資料，也不會呼叫後端。</p></div><button class="modal-close" type="button" data-modal-close aria-label="關閉"><svg width="17" height="17"><use href="#i-close" /></svg></button></div><form class="demo-form" data-demo-form><label>你的工作情境<select><option>民宿老闆</option><option>包租代管營運</option><option>財務／房東報表</option></select></label><label>最想先解決的事<input required placeholder="例如：退房清潔與房東分帳" /></label><div class="modal-actions"><button class="btn" type="button" data-modal-close>先看看</button><button class="btn btn-primary" type="submit">進入原型示範</button></div></form></div></div>
+
+  <script>
+    const modal = document.querySelector('[data-modal]');
+    const openModal = (label) => {
+      document.querySelector('#modal-title').textContent = label || '看一個完整示範';
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('modal-open');
+      modal.querySelector('input').focus();
+    };
+    const closeModal = () => { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); document.body.classList.remove('modal-open'); };
+    document.querySelectorAll('[data-demo]').forEach((button) => button.addEventListener('click', (event) => { event.preventDefault(); openModal(button.dataset.demo); }));
+    document.querySelectorAll('[data-modal-close]').forEach((button) => button.addEventListener('click', closeModal));
+    modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+    document.querySelector('[data-demo-form]').addEventListener('submit', (event) => { event.preventDefault(); closeModal(); window.setTimeout(() => window.alert('原型示範已準備好：下一步會進入營運總覽。'), 40); });
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeModal(); });
+
+    document.querySelectorAll('[data-scroll]').forEach((button) => button.addEventListener('click', () => document.getElementById(button.dataset.scroll).scrollIntoView({ behavior: 'smooth' })));
+    const menuButton = document.querySelector('[data-menu-toggle]');
+    const navLinks = document.querySelector('[data-nav-links]');
+    menuButton.addEventListener('click', () => navLinks.classList.toggle('open'));
+    navLinks.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => navLinks.classList.remove('open')));
+
+    const cases = {
+      owner: { label: 'OWNER VIEW · 今日營運', title: '先把入住體驗顧好，剩下的工作自然有順序。', copy: '把今天的入住、退房、待清潔與維修排成一條時間線。你不需要先翻四張表，才知道哪一件事會影響客人。', stats: ['08', '05', '07'], captions: ['今日入住', '今日退房', '待處理案件'] },
+      manager: { label: 'OPERATIONS VIEW · 多物業', title: '先找到卡住的物業，再決定人力要放在哪裡。', copy: '從全部物業切到單一館別，營運、維修與房東分潤不再各自一套表。把例外留在畫面上，讓團隊少一點追問。', stats: ['03', '12', '02'], captions: ['管理物業', '進行中訂房', '高優先維修'] },
+      finance: { label: 'OWNER VIEW · 月報與分帳', title: '月底不是重做一次，而是確認一次。', copy: '沿用訂房與物業資料整理本月營收、分潤與待匯出報表。讓房東看到清楚的數字，也讓團隊少一輪複製貼上。', stats: ['$138K', '92%', '02'], captions: ['本月營收', '已完成分帳', '待匯出報表'] }
+    };
+    document.querySelectorAll('[data-case]').forEach((button) => button.addEventListener('click', () => {
+      const data = cases[button.dataset.case];
+      document.querySelectorAll('[data-case]').forEach((item) => { item.classList.toggle('active', item === button); item.setAttribute('aria-selected', item === button ? 'true' : 'false'); });
+      document.querySelector('[data-case-label]').textContent = data.label;
+      document.querySelector('[data-case-title]').textContent = data.title;
+      document.querySelector('[data-case-copy]').textContent = data.copy;
+      data.stats.forEach((value, index) => document.querySelector(`[data-case-stat-${index + 1}]`).textContent = value);
+      data.captions.forEach((value, index) => document.querySelector(`[data-case-caption-${index + 1}]`).textContent = value);
+    }));
+  </script>
+</body>
+</html>

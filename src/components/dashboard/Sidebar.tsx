@@ -1,4 +1,7 @@
-// components/dashboard/Sidebar.tsx — desktop sidebar with grouped nav + property switcher
+// components/dashboard/Sidebar.tsx
+// Desktop sidebar — graphite dark + orange active accent, i18n-ready nav
+// Grouping: WORKSPACE / OPERATIONS / SYSTEM  (per docs/ui-redesign-review-2026-09-24.md)
+// URL ?propertyId= remains the single source of truth for property scope.
 "use client";
 
 import Link from "next/link";
@@ -16,34 +19,44 @@ import {
   IconUser,
   IconWrench,
 } from "./icons";
+import { dashboardCopy } from "./i18n";
 
 type NavGroup = {
   heading: string;
-  items: { href: string; label: string; Icon: typeof IconGrid }[];
+  items: NavItem[];
+};
+
+type NavItem = {
+  href: string;
+  label: string;
+  labelEn: string;
+  Icon: typeof IconGrid;
+  countKey?: "openCases" | "maintenance" | "ics"; // visual hint, optional
 };
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    heading: "營運",
-    items: [{ href: "/dashboard", label: "總覽", Icon: IconGrid }],
-  },
-  {
-    heading: "管理",
+    heading: "WORKSPACE",
     items: [
-      { href: "/dashboard/bookings", label: "訂房", Icon: IconCalendar },
-      { href: "/dashboard/tenants", label: "房客", Icon: IconUser },
-      { href: "/dashboard/properties", label: "物業", Icon: IconBuilding },
-      { href: "/dashboard/requirements", label: "需求單", Icon: IconList },
-      { href: "/dashboard/maintenance", label: "派工單", Icon: IconWrench },
+      { href: "/dashboard", label: "總覽", labelEn: "Overview", Icon: IconGrid },
+      { href: "/dashboard/bookings", label: "訂房", labelEn: "Bookings", Icon: IconCalendar },
+      { href: "/dashboard/tenants", label: "房客", labelEn: "Tenants", Icon: IconUser },
+      { href: "/dashboard/properties", label: "物業", labelEn: "Properties", Icon: IconBuilding },
     ],
   },
   {
-    heading: "財務",
-    items: [{ href: "/dashboard/reports", label: "月報表", Icon: IconChart }],
+    heading: "OPERATIONS",
+    items: [
+      { href: "/dashboard/requirements", label: "需求單", labelEn: "Work orders", Icon: IconList },
+      { href: "/dashboard/maintenance", label: "派工單", labelEn: "Maintenance", Icon: IconWrench },
+      { href: "/dashboard/reports", label: "月報表", labelEn: "Reports", Icon: IconChart },
+    ],
   },
   {
-    heading: "自動化",
-    items: [{ href: "/dashboard/ics", label: "ICS 同步", Icon: IconSync }],
+    heading: "AUTOMATE",
+    items: [
+      { href: "/dashboard/ics", label: "ICS 同步", labelEn: "ICS sync", Icon: IconSync },
+    ],
   },
 ];
 
@@ -52,9 +65,11 @@ type PropertyOption = { id: string; name: string; roomType: string };
 export function Sidebar({
   properties,
   activePropertyId,
+  openCases,
 }: {
   properties: PropertyOption[];
   activePropertyId: string | null;
+  openCases?: number;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -62,9 +77,9 @@ export function Sidebar({
   const [open, setOpen] = useState(false);
 
   const scopeLabel = useMemo(() => {
-    if (!activePropertyId) return "全部物業";
+    if (!activePropertyId) return dashboardCopy.workspace.allProperties;
     const p = properties.find((x) => x.id === activePropertyId);
-    return p?.name ?? "未選擇";
+    return p?.name ?? dashboardCopy.workspace.unselected;
   }, [activePropertyId, properties]);
 
   function switchProperty(id: string | null) {
@@ -75,10 +90,12 @@ export function Sidebar({
     router.push(`/dashboard${qs ? `?${qs}` : ""}`);
   }
 
+  const t = dashboardCopy;
+
   return (
     <aside
       className="sidebar-desktop"
-      aria-label="側邊欄"
+      aria-label={t.sidebar.ariaLabel}
       data-testid="dashboard-sidebar"
     >
       <div className="brand">
@@ -86,28 +103,23 @@ export function Sidebar({
           <IconBed />
         </div>
         <div>
-          <div className="brand-name">民宿管家</div>
-          <div className="brand-sub">Hotel PM Pro · 商業版</div>
+          <div className="brand-name">Hotel PM Pro</div>
+          <div className="brand-sub">{t.brand.sub}</div>
         </div>
       </div>
 
-      <button
-        type="button"
-        className="property-switcher"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="切換物業範圍"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-      >
-        <span className="property-avatar" aria-hidden="true">
-          {activePropertyId ? "物" : "全"}
+      <div className="workspace-card" aria-label={t.workspace.label}>
+        <div className="workspace-top">
+          <span>{t.workspace.scopeBadge}</span>
+          <IconChevron />
+        </div>
+        <span className="workspace-name">{scopeLabel}</span>
+        <span className="workspace-meta">
+          {properties.length > 0
+            ? `${properties.length} ${t.workspace.managedSingular}`
+            : t.workspace.emptyHint}
         </span>
-        <span className="property-copy">
-          <span className="property-label">目前管理範圍</span>
-          <span className="property-name">{scopeLabel}</span>
-        </span>
-        <IconChevron />
-      </button>
+      </div>
 
       {properties.length > 0 && (
         <details
@@ -118,7 +130,9 @@ export function Sidebar({
             setOpen(details.open);
           }}
         >
-          <summary className="property-list-summary">選擇物業</summary>
+          <summary className="property-list-summary">
+            {t.workspace.chooseAction}
+          </summary>
           <ul className="property-list-options">
             <li>
               <button
@@ -126,17 +140,19 @@ export function Sidebar({
                 className={`property-list-option ${!activePropertyId ? "active" : ""}`}
                 onClick={() => switchProperty(null)}
               >
-                全部物業
+                {t.workspace.allProperties}
               </button>
             </li>
             {properties.map((p) => (
               <li key={p.id}>
                 <button
                   type="button"
-                  className={`property-list-option ${activePropertyId === p.id ? "active" : ""}`}
+                  className={`property-list-option ${
+                    activePropertyId === p.id ? "active" : ""
+                  }`}
                   onClick={() => switchProperty(p.id)}
                 >
-                  {p.name}
+                  <span>{p.name}</span>
                   <span className="property-list-meta">{p.roomType}</span>
                 </button>
               </li>
@@ -145,11 +161,11 @@ export function Sidebar({
         </details>
       )}
 
-      <nav className="sidebar-nav" aria-label="主導覽">
+      <nav className="sidebar-nav" aria-label={t.sidebar.navLabel}>
         {NAV_GROUPS.map((group) => (
           <div className="nav-group" key={group.heading}>
-            <div className="nav-heading">{group.heading}</div>
-            {group.items.map(({ href, label, Icon }) => {
+            <div className="nav-label">{group.heading}</div>
+            {group.items.map(({ href, label, labelEn, Icon, countKey }) => {
               const active =
                 href === "/dashboard"
                   ? pathname === "/dashboard"
@@ -164,13 +180,44 @@ export function Sidebar({
                   <span className="nav-icon" aria-hidden="true">
                     <Icon />
                   </span>
-                  <span>{label}</span>
+                  <span className="nav-label-side">
+                    <span aria-hidden={false}>{label}</span>
+                    <span
+                      aria-label={`${label}, ${labelEn}`}
+                      style={{
+                        display: "block",
+                        fontSize: 9,
+                        fontWeight: 600,
+                        color: "var(--canopy-graphite-muted)",
+                        letterSpacing: 0.08,
+                        marginTop: 1,
+                      }}
+                    >
+                      {labelEn}
+                    </span>
+                  </span>
+                  {countKey === "openCases" && openCases && openCases > 0 ? (
+                    <span className="nav-count" aria-label={`${openCases} 件待辦`}>
+                      {openCases}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}
           </div>
         ))}
       </nav>
+
+      <div className="sidebar-foot" aria-label={t.footer.ariaLabel}>
+        <div className="sync-row">
+          <span className="sync-dot" aria-hidden="true" />
+          <span className="sync-label">{t.footer.servicesOk}</span>
+        </div>
+        <div className="tz-row">
+          <span>{t.footer.tz}</span>
+          <span className="demo-pill">{t.footer.demoBadge}</span>
+        </div>
+      </div>
     </aside>
   );
 }

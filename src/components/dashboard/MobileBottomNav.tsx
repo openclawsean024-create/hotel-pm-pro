@@ -1,22 +1,23 @@
-// components/dashboard/MobileBottomNav.tsx — 4-tab bottom nav for <780px
+// components/dashboard/MobileBottomNav.tsx — 4-tab sticky bottom nav (≤780px)
+// Reflects the new IA: Overview / Bookings / Maintenance / Reports.
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  IconBed,
+  IconGrid,
   IconCalendar,
+  IconWrench,
   IconChart,
-  IconList,
 } from "./icons";
 
-type Tab = { href: string; label: string; Icon: typeof IconBed };
+type Tab = { href: string; label: string; labelEn: string; Icon: typeof IconGrid };
 
 const TABS: Tab[] = [
-  { href: "/dashboard", label: "總覽", Icon: IconBed },
-  { href: "/dashboard/bookings", label: "訂房", Icon: IconCalendar },
-  { href: "/dashboard/requirements", label: "待辦", Icon: IconList },
-  { href: "/dashboard/reports", label: "月報", Icon: IconChart },
+  { href: "/dashboard", label: "總覽", labelEn: "Overview", Icon: IconGrid },
+  { href: "/dashboard/bookings", label: "訂房", labelEn: "Bookings", Icon: IconCalendar },
+  { href: "/dashboard/maintenance", label: "派工", labelEn: "Maintenance", Icon: IconWrench },
+  { href: "/dashboard/reports", label: "月報", labelEn: "Reports", Icon: IconChart },
 ];
 
 export function MobileBottomNav() {
@@ -27,7 +28,7 @@ export function MobileBottomNav() {
       aria-label="行動導覽"
       data-testid="dashboard-mobile-bottom-nav"
     >
-      {TABS.map(({ href, label, Icon }) => {
+      {TABS.map(({ href, label, labelEn, Icon }) => {
         const active =
           href === "/dashboard"
             ? pathname === "/dashboard"
@@ -38,6 +39,7 @@ export function MobileBottomNav() {
             href={href}
             className={`mobile-bottom-tab ${active ? "active" : ""}`}
             aria-current={active ? "page" : undefined}
+            aria-label={`${label}, ${labelEn}`}
           >
             <span className="mobile-bottom-tab-icon" aria-hidden="true">
               <Icon />

@@ -1,6 +1,9 @@
-// components/dashboard/AlertStrip.tsx — top alert strip
+// components/dashboard/AlertStrip.tsx — legacy alert strip (kept for safety in
+// case downstream pages still import it). The new dashboard render composes
+// an OperationalPulse inline in DashboardClient instead.
 "use client";
 
+import Link from "next/link";
 import { IconAlert } from "./icons";
 
 export function AlertStrip({
@@ -21,16 +24,25 @@ export function AlertStrip({
 
   return (
     <div className="alert-strip" role="status" aria-live="polite">
-      <span className="alert-icon" aria-hidden="true">
-        <IconAlert />
+      <span
+        className="pulse-item"
+        aria-hidden="true"
+        style={{ display: "flex", alignItems: "center", padding: "0 13px", background: "var(--canopy-panel)" }}
+      >
+        <span className="pulse-dot" aria-hidden="true" />
       </span>
-      <span className="alert-copy">
-        <strong>需要立即處理：</strong>
-        {parts.join(" · ")}
-      </span>
-      <a className="btn-quiet" href="/dashboard/maintenance">
-        前往派工單
-      </a>
+      <div className="pulse-item" style={{ background: "var(--canopy-panel)" }}>
+        <div className="pulse-label" style={{ color: "var(--canopy-muted)" }}>
+          <span className="pulse-dot red" aria-hidden="true" /> 待辦
+        </div>
+        <div className="pulse-title">{parts.join(" · ")}</div>
+      </div>
+      <div className="pulse-item" style={{ background: "var(--canopy-panel)" }} />
+      <div className="pulse-item" style={{ background: "var(--canopy-panel)", display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 17px" }}>
+        <Link href="/dashboard/maintenance" className="link">
+          前往派工單 →
+        </Link>
+      </div>
     </div>
   );
 }

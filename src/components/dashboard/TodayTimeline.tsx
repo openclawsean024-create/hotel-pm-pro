@@ -1,48 +1,86 @@
-// components/dashboard/TodayTimeline.tsx — today's events in time order
+// components/dashboard/TodayTimeline.tsx — Today's arrivals/departures/cleaning/maintenance
 "use client";
 
 import type { TimelineItem } from "./types";
 
-const TYPE_LABEL: Record<TimelineItem["type"], string> = {
-  checkin: "入住",
-  checkout: "退房",
-  cleaning: "待清潔",
-  maintenance: "維修",
+type Props = {
+  events: TimelineItem[];
+  loading?: boolean;
 };
 
-export function TodayTimeline({ items }: { items: TimelineItem[] }) {
+const TYPE_LABEL: Record<TimelineItem["type"], string> = {
+  checkin: "Check-in",
+  checkout: "Check-out",
+  cleaning: "Cleaning",
+  maintenance: "Maintenance",
+};
+
+const PILL_TONE: Record<string, string> = {
+  checkin: "ready",
+  checkout: "info",
+  cleaning: "pending",
+  maintenance: "blocked",
+};
+
+const DOT_TONE: Record<string, string> = {
+  checkin: "green",
+  checkout: "blue",
+  cleaning: "yellow",
+  maintenance: "red",
+};
+
+export function TodayTimeline({ events, loading }: Props) {
   return (
-    <div className="card">
-      <div className="card-header">
+    <section className="card today-card" aria-labelledby="today-title">
+      <header className="card-header">
         <div>
-          <h3 className="card-title">今日營運</h3>
+          <h2 id="today-title" className="card-title">
+            今日營運 · Today's operations
+          </h2>
           <p className="card-subtitle">入住 / 退房 / 清潔 / 維修</p>
         </div>
-        <span className="scope-text">{items.length} 件</span>
-      </div>
-      <div className="card-body">
-        {items.length === 0 ? (
-          <p className="muted">今日沒有安排事項。</p>
+        <span className="link" aria-hidden="true">{events.length} 項</span>
+      </header>
+      <div className="card-body" style={{ minHeight: 220 }}>
+        {loading ? (
+          <div className="ops-skeleton" aria-hidden={true}>
+            <div className="skeleton-strip" />
+            <div className="skeleton-strip" />
+            <div className="skeleton-strip" />
+            <div className="skeleton-strip" />
+          </div>
+        ) : events.length === 0 ? (
+          <p className="muted" style={{ margin: 0 }}>
+            今日沒有安排事項。
+          </p>
         ) : (
-          <ol className="timeline" aria-label="今日事件時序">
-            {items.map((item, idx) => (
-              <li className="timeline-item" key={`${item.time}-${idx}-${item.propertyId}-${item.type}`}>
-                <span className="timeline-time tabular-nums">{item.time}</span>
-                <span className={`timeline-dot tone-${item.pill.tone}`} aria-hidden="true" />
-                <div>
+          <ul className="timeline" role="list">
+            {events.map((item, i) => (
+              <li className="timeline-item" key={`${item.time}-${i}`}>
+                <time className="timeline-time">{item.time}</time>
+                <span
+                  className={`timeline-dot ${DOT_TONE[item.type] ? `tone-${DOT_TONE[item.type]}` : ""}`}
+                  aria-hidden={true}
+                />
+                <div className="timeline-body">
                   <div className="timeline-title">
-                    {TYPE_LABEL[item.type]}
-                    <span className={`timeline-pill tone-${item.pill.tone}`}>
-                      {item.pill.label}
+                    <span>{TYPE_LABEL[item.type]}</span>
+                    <span style={{ color: "var(--canopy-muted)", fontWeight: 500 }}>
+                      {item.meta}
                     </span>
                   </div>
-                  <div className="timeline-meta">{item.meta}</div>
+                  <div className="timeline-meta">{item.propertyId}</div>
                 </div>
+                <span
+                  className={`timeline-pill ${PILL_TONE[item.type] ? `tone-${PILL_TONE[item.type]}` : ""}`}
+                >
+                  {item.pill.label}
+                </span>
               </li>
             ))}
-          </ol>
+          </ul>
         )}
       </div>
-    </div>
+    </section>
   );
 }
