@@ -3646,6 +3646,43 @@ body.has-ops-shell { background: var(--canopy-canvas); }
   font-size: 10px;
 }
 
+/* ----- Narrow 780px / 360px responsive hardening ----- */
+/* At the 780px boundary the 720 collapse hasn't kicked in yet, so stack the
+   pricing grid + compare table scroll region to keep cards readable. */
+@media (max-width: 780px) {
+  .landing .landing-nav-inner { min-height: 65px; }
+  .landing .landing-nav-links { display: none; }
+  .landing .landing-menu-btn { display: inline-flex; }
+  .landing .landing-nav-link-text { display: none; }
+  .landing .landing-nav-actions { margin-left: auto; }
+  .landing .landing-pricing-grid { grid-template-columns: 1fr; }
+  .landing .landing-workflow-card:not(:last-child)::after { display: none; }
+  .landing .landing-compare { overflow-x: auto; }
+  .landing .landing-compare-table { min-width: 640px; }
+  .landing .landing-tab-list { grid-template-columns: 1fr; }
+  .landing .landing-cta-box { align-items: flex-start; flex-direction: column; padding: 30px 25px; }
+  .landing .landing-cta-box h2 { font-size: 27px; }
+  .landing .landing-cta-actions { width: 100%; }
+  .landing .landing-cta-actions .landing-btn { flex: 1; }
+  .landing .landing-footer-main { grid-template-columns: repeat(2, 1fr); padding-top: 35px; gap: 24px 18px; }
+  .landing .landing-footer-brand { grid-column: 1 / -1; }
+}
+
+/* Below the existing 430px breakpoint, the preview window + caption need a
+   final squeeze to keep nothing clipped at 360px wide. */
+@media (max-width: 380px) {
+  .landing .landing-wrap { width: min(100% - 24px, 560px); }
+  .landing .landing-preview-window { border-radius: 14px; }
+  .landing .landing-preview-body { padding: 8px; }
+  .landing .landing-preview-main { padding: 12px; }
+  .landing .landing-preview-metrics { gap: 8px; }
+  .landing .landing-preview-caption { right: 8px; bottom: -14px; padding: 8px 12px; font-size: 11px; }
+  .landing .landing-topline { font-size: 11px; }
+  .landing .landing-topline-inner { padding: 0 12px; gap: 6px; }
+  .landing .landing-preview-brand-mark { width: 22px; height: 22px; font-size: 12px; }
+  .landing .landing-skip-link { position: fixed; }
+}
+
 /* ----- Visually hidden helper inside .landing ----- */
 .landing .sr-only {
   position: absolute;
