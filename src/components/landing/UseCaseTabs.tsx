@@ -91,6 +91,16 @@ export default function UseCaseTabs() {
 
   return (
     <div className="landing-use-case">
+      {/* Minimal polite live region for tab change announcements. The
+          tabpanel itself is intentionally left without aria-live so the full
+          panel copy is not re-read on every switch. */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {active.tabLabel}
+      </div>
       <div className="landing-tab-list" role="tablist" aria-label="使用情境">
         {CASES.map((item, index) => {
           const selected = index === activeIndex;
