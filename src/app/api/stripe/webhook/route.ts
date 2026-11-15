@@ -47,7 +47,8 @@ export async function POST(req: Request) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        const periodEnd = (sub as any).current_period_end ?? (sub as any).billing_cycle_anchor ?? Date.now() / 1000;
+        const legacy = sub as unknown as { current_period_end?: number; billing_cycle_anchor?: number };
+        const periodEnd = legacy.current_period_end ?? legacy.billing_cycle_anchor ?? Date.now() / 1000;
         await pgQuery(
           `UPDATE "Subscription" SET status = $1, "cancelAtPeriodEnd" = $2, "stripeCurrentPeriodEnd" = to_timestamp($3) WHERE "stripeSubscriptionId" = $4`,
           [sub.status, sub.cancel_at_period_end, periodEnd, sub.id]

@@ -1,6 +1,6 @@
 // app/dashboard/ics/page.tsx — F-M9 ICS 同步
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -22,7 +22,7 @@ interface ImportResult {
 }
 
 export default function IcsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,14 +35,7 @@ export default function IcsPage() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    else if (status === "authenticated") loadProperties();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, router]);
-
-  async function loadProperties() {
-    setLoading(true);
+  const loadProperties = useCallback(async () => {
     try {
       const res = await fetch("/api/properties");
       const data = await res.json();
@@ -54,7 +47,12 @@ export default function IcsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+    else if (status === "authenticated") void loadProperties();
+  }, [status, router, loadProperties]);
 
   async function handleImport(e: React.FormEvent) {
     e.preventDefault();

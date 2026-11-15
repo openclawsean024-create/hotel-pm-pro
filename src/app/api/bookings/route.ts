@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   let query = `SELECT id, "guestName", "propertyId", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt"
                FROM "Booking"
                WHERE "userId" = $1`;
-  const params: any[] = [session.user.id];
+  const params: unknown[] = [session.user.id];
 
   if (propertyId) {
     query += ` AND "propertyId" = $2`;

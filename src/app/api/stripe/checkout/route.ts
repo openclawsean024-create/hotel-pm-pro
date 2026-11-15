@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "無效的方案" }, { status: 400 });
   }
 
-  let user = await pgQueryOne<any>(
+  const user = await pgQueryOne<{ id: string; email: string; name: string | null; stripeCustomerId: string | null }>(
     `SELECT id, email, name, "stripeCustomerId" FROM "User" WHERE id = $1`,
     [session.user.id]
   );

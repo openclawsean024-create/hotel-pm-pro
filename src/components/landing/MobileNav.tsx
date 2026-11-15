@@ -29,9 +29,10 @@ export default function MobileNav({ links }: { links: NavLink[] }) {
     const id = window.requestAnimationFrame(() => {
       firstLinkRef.current?.focus();
     });
+    const trigger = buttonRef.current;
     return () => {
       window.cancelAnimationFrame(id);
-      buttonRef.current?.focus();
+      trigger?.focus();
     };
   }, [open]);
 

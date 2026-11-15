@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const endDate = new Date(year, month, 1).toISOString().slice(0, 10); // 下月 1 號（exclusive）
 
   // 拉所有 properties + 房東分潤
-  const properties = await pgQuery<any>(
+  const properties = await pgQuery<{ id: string; name: string; monthlyRent: number; ownerShare: number }>(
     `SELECT id, name, "monthlyRent", "ownerShare"
      FROM "Property"
      WHERE "userId" = $1
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   );
 
   // 拉這個月所有 bookings（訂房收入）
-  const bookings = await pgQuery<any>(
+  const bookings = await pgQuery<{ id: string; guestName: string; propertyId: string; checkIn: string; checkOut: string; channel: string; totalPrice: number }>(
     `SELECT id, "guestName", "propertyId", "checkIn", "checkOut", channel, "totalPrice"
      FROM "Booking"
      WHERE "userId" = $1

@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   let query = `SELECT id, name, phone, email, "propertyId", "startDate", "endDate", "monthlyRent", deposit, status, "createdAt"
                FROM "Tenant"
                WHERE "userId" = $1`;
-  const params: any[] = [session.user.id];
+  const params: unknown[] = [session.user.id];
 
   if (propertyId) {
     query += ` AND "propertyId" = $2`;

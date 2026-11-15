@@ -4,7 +4,6 @@
 "use client";
 
 import Link from "next/link";
-import { IconAlert } from "./icons";
 
 export function AlertStrip({
   cleaning,

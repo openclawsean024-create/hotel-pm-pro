@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { pgQuery, pgQueryOne } from "@/lib/pg-client";
+import { pgQueryOne } from "@/lib/pg-client";
 import { parseIcsText, IcsParseError, IcsEvent as ParsedIcsEvent } from "@/lib/ics-parser";
 
 const importSchema = z.object({

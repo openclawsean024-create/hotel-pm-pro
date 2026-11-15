@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { IconList, IconAlertNew } from "./icons";
 import type { WorkbenchItem } from "./types";
 
@@ -82,6 +83,8 @@ function statusToIconBucket(s: string): "open" | "progress" | "done" {
 }
 
 export function Workbench({ items, loading, copy: copyProp }: Props) {
+  // 逾期判斷用的「現在」只在掛載時取一次，避免在 render 期間呼叫不純函式。
+  const [now] = useState(() => Date.now());
   // Non-null fallback so consumer callers don't have to thread every label.
   const copy: NonNullable<Props["copy"]> = copyProp ?? {
     title: "",
@@ -172,7 +175,7 @@ export function Workbench({ items, loading, copy: copyProp }: Props) {
             const bucket = statusToIconBucket(item.status);
             const isUrgent =
               item.priority === "urgent" ||
-              (item.dueAt && new Date(item.dueAt).getTime() < Date.now());
+              (item.dueAt && new Date(item.dueAt).getTime() < now);
             return (
               <div className="queue-item" key={item.id} role="listitem">
                 <span className={`queue-status ${bucket}`} aria-hidden={true}>

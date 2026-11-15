@@ -34,7 +34,7 @@ export default function ContactPage() {
         return;
       }
       setSubmitted(true);
-    } catch (err) {
+    } catch {
       setError("送出失敗，請稍後重試");
     } finally {
       setLoading(false);

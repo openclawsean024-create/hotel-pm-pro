@@ -12,7 +12,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
 
   // 確認擁有權
-  const property = await pgQueryOne<any>(
+  const property = await pgQueryOne<{ id: string; userId: string }>(
     `SELECT id, "userId" FROM "Property" WHERE id = $1 LIMIT 1`,
     [id]
   );

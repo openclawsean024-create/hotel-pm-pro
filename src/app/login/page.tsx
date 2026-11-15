@@ -23,7 +23,7 @@ export default function LoginPage() {
       } else {
         router.push("/dashboard");
       }
-    } catch (err) {
+    } catch {
       setError("登入失敗，請稍後重試");
     } finally {
       setLoading(false);

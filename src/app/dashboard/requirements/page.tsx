@@ -1,6 +1,6 @@
 // app/dashboard/requirements/page.tsx — F-M4 需求記錄 (minimal compile version)
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
@@ -19,7 +19,7 @@ interface Requirement {
 interface Property { id: string; name: string; }
 
 export default function RequirementsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -34,13 +34,7 @@ export default function RequirementsPage() {
   });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    else if (status === "authenticated") loadAll();
-  }, [status, router]);
-
-  async function loadAll() {
-    setLoading(true);
+  const loadAll = useCallback(async () => {
     try {
       const [r, p] = await Promise.all([
         fetch("/api/requirements").then((r) => r.json()),
@@ -48,15 +42,19 @@ export default function RequirementsPage() {
       ]);
       setRequirements(r.requirements ?? []);
       setProperties(p.properties ?? []);
-      if (!form.propertyId && p.properties?.[0]) {
-        setForm({ ...form, propertyId: p.properties[0].id });
-      }
+      const first = p.properties?.[0];
+      if (first) setForm((f) => (f.propertyId ? f : { ...f, propertyId: first.id }));
     } catch {
       setError("載入失敗");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+    else if (status === "authenticated") void loadAll();
+  }, [status, router, loadAll]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();

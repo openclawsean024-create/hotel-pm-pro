@@ -7,7 +7,7 @@ import { useSession } from "next-auth/react";
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,7 +36,7 @@ function CheckoutContent() {
         return;
       }
       window.location.href = data.url;
-    } catch (err) {
+    } catch {
       setError("付款失敗，請稍後重試");
     } finally {
       setLoading(false);

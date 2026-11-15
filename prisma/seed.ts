@@ -31,7 +31,7 @@ const pool = new Pool({
   max: 2,
 });
 
-async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+async function query<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
   if (isDryRun) {
     console.log(`[dry-run] SQL: ${sql.replace(/\s+/g, " ").trim()}`);
     if (params.length) console.log(`[dry-run] PARAMS: ${JSON.stringify(params)}`);

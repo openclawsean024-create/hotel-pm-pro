@@ -18,18 +18,18 @@ export const pgPool =
 if (process.env.NODE_ENV !== "production") globalForPg.pg = pgPool;
 
 // Helper: 把 query 結果轉成物件
-export async function pgQuery<T = any>(
+export async function pgQuery<T = Record<string, unknown>>(
   sql: string,
-  params: any[] = []
+  params: unknown[] = []
 ): Promise<T[]> {
   const result = await pgPool.query(sql, params);
   return result.rows as T[];
 }
 
 // Helper: 單一 row
-export async function pgQueryOne<T = any>(
+export async function pgQueryOne<T = Record<string, unknown>>(
   sql: string,
-  params: any[] = []
+  params: unknown[] = []
 ): Promise<T | null> {
   const rows = await pgQuery<T>(sql, params);
   return rows[0] ?? null;
