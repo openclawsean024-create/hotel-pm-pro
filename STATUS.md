@@ -18,7 +18,7 @@
 | AC-005 | 訂房重疊檢查 | ⬜ | — |
 | AC-006 | Stripe 測試模式 | ⬜ | — |
 | AC-007 | ICS 匯入與 SSRF | ⬜ | — |
-| AC-008 | 安全標頭、proxy、E2E | ⬜ | — |
+| AC-008 | 安全標頭、proxy、E2E | ✅ | `src/lib/security-headers.test.ts`、`e2e/smoke.spec.ts`、`e2e/flows.spec.ts` |
 | AC-009 | 已知缺陷修正 | ⬜ | — |
 | AC-010 | 收尾與資料衛生 | ⬜ | — |
 
