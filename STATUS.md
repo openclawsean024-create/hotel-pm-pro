@@ -16,7 +16,7 @@
 | AC-003 | 月報與 CSV | ✅ | `src/lib/csv.test.ts`、`src/lib/dates.test.ts`、`src/app/api/reports/monthly/route.test.ts` |
 | AC-004 | 合約到期／逾期提醒 | ✅ | `src/lib/contracts.test.ts`（總覽 API 的 contractAlerts 另見 AC-009 的 summary 測試檔） |
 | AC-005 | 訂房重疊檢查 | ✅ | `src/lib/booking-rules.test.ts`、`src/app/api/bookings/route.test.ts` |
-| AC-006 | Stripe 測試模式 | ⬜ | — |
+| AC-006 | Stripe 測試模式 | 🟡 (a)(b) 通過；(c) 需 Sean 以 Stripe CLI 執行 | `src/app/api/stripe/webhook/route.test.ts`、`src/app/api/stripe/checkout/route.test.ts`、`src/lib/stripe.test.ts` |
 | AC-007 | ICS 匯入與 SSRF | ⬜ | — |
 | AC-008 | 安全標頭、proxy、E2E | ✅ | `src/lib/security-headers.test.ts`、`e2e/smoke.spec.ts`、`e2e/flows.spec.ts` |
 | AC-009 | 已知缺陷修正 | ✅ | `src/app/api/dashboard/preload.test.ts`、`src/app/api/dashboard/summary/route.test.ts`、`src/lib/occupancy.test.ts`、`src/app/api/requirements/[id]/route.test.ts` |
