@@ -11,17 +11,17 @@ npm ci --legacy-peer-deps
 npx prisma generate
 ```
 
-## 2. 驗證指令（依 `package.json` scripts 查證，2026-11-16）
+## 2. 驗證指令（依 `package.json` scripts 查證，2026-11-16，M1 分支 `feat/m1`）
 
 | 類型 | 指令 | 現況 |
 |---|---|---|
 | 安裝 | `npm ci --legacy-peer-deps` | 可用（2026-11-16 本機 exit 0） |
 | Prisma client | `npx prisma generate` | 可用（exit 0）；不需連資料庫 |
 | Typecheck | `npm run typecheck`（= `tsc --noEmit`） | 可用（exit 0） |
-| Lint | `npm run lint` | ⚠️ 實際是 `tsc --noEmit`，**不是 ESLint**；repo 有 `.eslintrc.json` 但沒有安裝 eslint。真正的 lint 尚未配置 |
-| Unit test | `npm test` | ⚠️ 只執行 `echo "no unit tests yet…"` 並 exit 0，**目前 0 個測試**；不得把它當成測試通過。Vitest 尚未配置（M1 AC-001） |
-| Integration test | — | 尚未配置（M1 以 route handler 測試補上） |
-| E2E | — | 尚未配置（無 Playwright；M1 AC-008 加入 `test:e2e`） |
+| Lint | `npm run lint`（= `eslint .`） | 可用；ESLint 9 flat config（`eslint.config.mjs`，`eslint-config-next`） |
+| Unit test | `npm test`（= `vitest run`） | 可用；單元測試與 route handler 測試，不連資料庫、不連 Stripe |
+| Integration test | `npx vitest run src/app/api` | route handler 測試（以 `vi.mock` 取代 `@/lib/pg-client`、`@/lib/auth`、`fetch`） |
+| E2E | `npm run test:e2e`（= `playwright test`） | 可用；自行以假環境變數 build + start（port 3210），不需資料庫。第一次需 `npx playwright install chromium` |
 | Build | `npm run build` | 可用；需要環境變數（可用假值），見 §3 |
 | Dev server | `npm run dev` | 可用；登入與後台需要可連線的 Postgres |
 | 正式啟動 | `npm run start` | 需先 build |
@@ -46,28 +46,38 @@ npm run build
 
 2026-11-16 本機（Node v26.13.1）以上述假值執行 exit 0。
 
-## 4. 提交前檢查（目前可用的部分）
+## 4. 提交前檢查
 
 ```bash
 npm run typecheck
+npm run lint
+npm test
+npm run test:e2e
 npm run build        # 帶 §3 假環境變數
 git diff --check
 git grep -nE "sk_live_[A-Za-z0-9]|rk_live_[A-Za-z0-9]|whsec_[A-Za-z0-9]{20,}"   # 應無輸出
 ```
 
-`npm test` 與 `npm run lint` 在 M1 完成前不能證明任何事，不得在 PR 或 STATUS 中寫成「測試通過」。
-
-## 5. M1 完成後預計的指令（尚未配置，完成 AC 後再改成可用）
+## 5. 各 AC 的測試
 
 | 指令 | 對應 AC |
 |---|---|
-| `npm test`（Vitest） | AC-001～AC-007、AC-009 |
-| `npx vitest run <path>` | 各 AC 指定的測試檔 |
-| `npm run test:e2e`（Playwright） | AC-008 |
+| `npx vitest run src/lib/ci-baseline.test.ts` | AC-001 |
+| `npx vitest run src/lib/settlement.test.ts` | AC-002 |
+| `npx vitest run src/lib/csv.test.ts src/app/api/reports` | AC-003 |
+| `npx vitest run src/lib/contracts.test.ts` | AC-004 |
+| `npx vitest run src/lib/booking-rules.test.ts src/app/api/bookings` | AC-005 |
+| `npx vitest run src/app/api/stripe` | AC-006 (a)(b) |
+| `npx vitest run src/lib/ics-parser.test.ts src/app/api/ics` | AC-007 |
+| `npm run test:e2e` | AC-008 |
+| `npx vitest run src/app/api/dashboard src/lib/occupancy.test.ts` | AC-009 |
+| `npx vitest run src/lib/data-hygiene.test.ts` | AC-010 |
 
-## 6. Stripe 測試模式手動驗證（AC-006 (c)，尚未執行）
+測試名稱一律以 AC 編號開頭，可用 `npx vitest run -t "AC-002"` 只跑某一條。
 
-需要：Stripe CLI、Stripe **測試模式**帳號、本機 `.env.local` 的測試金鑰（不提交）。
+## 6. Stripe 測試模式手動驗證（AC-006 (c)，需 Sean 執行）
+
+需要：Stripe CLI、Stripe **測試模式**帳號、本機 `.env.local` 的測試金鑰（不提交），以及已套用 `StripeEvent` 表的**開發用**資料庫（`npx prisma db push`）。
 
 ```bash
 npm run dev
