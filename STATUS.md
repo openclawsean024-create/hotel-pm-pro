@@ -12,7 +12,7 @@
 | AC | 內容 | 狀態 | 測試（名稱皆以 AC 編號開頭） |
 |---|---|---|---|
 | AC-001 | 測試基線（Vitest、ESLint、CI 必經） | ✅ | `src/lib/ci-baseline.test.ts` |
-| AC-002 | 拆帳引擎 | ⬜ | — |
+| AC-002 | 拆帳引擎 | ✅ | `src/lib/settlement.test.ts` |
 | AC-003 | 月報與 CSV | ⬜ | — |
 | AC-004 | 合約到期／逾期提醒 | ⬜ | — |
 | AC-005 | 訂房重疊檢查 | ⬜ | — |
