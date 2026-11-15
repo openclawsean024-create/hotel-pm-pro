@@ -87,6 +87,8 @@ stripe trigger checkout.session.completed
 | `git grep -nE "sk_live_[A-Za-z0-9]\|rk_live_[A-Za-z0-9]\|whsec_[A-Za-z0-9]{20,}"` | 1 | 無輸出（沒有金鑰） |
 | `grep -c "continue-on-error" .github/workflows/ci.yml` | — | `0` |
 
+PR 上的 CI（openclawsean024-create/hotel-pm-pro#2，run `43757807052`，commit `e0f20dd`，Node 20）：Lint + Typecheck ✅、Vitest ✅、Playwright E2E ✅（38 passed）、Build ✅；Deploy 依設定只在 push 到 main 時執行，此次為 skipped。
+
 AC-009 回歸測試「先失敗後通過」：修正前執行 `npx vitest run src/app/api/dashboard src/app/api/requirements`，19 個測試失敗（checkout_today 房況、入住率、需求單 PATCH 不存在），另 `preload.test.ts` 因 `loadDashboardPreload` 不存在而無法載入；修正後全數通過。
 
 ## 合併進度（`hotel-pm` → 本 repo，SPEC §12.1）
