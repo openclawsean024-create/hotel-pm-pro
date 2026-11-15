@@ -15,7 +15,7 @@
 | AC-002 | 拆帳引擎 | ✅ | `src/lib/settlement.test.ts` |
 | AC-003 | 月報與 CSV | ✅ | `src/lib/csv.test.ts`、`src/lib/dates.test.ts`、`src/app/api/reports/monthly/route.test.ts` |
 | AC-004 | 合約到期／逾期提醒 | ✅ | `src/lib/contracts.test.ts`（總覽 API 的 contractAlerts 另見 AC-009 的 summary 測試檔） |
-| AC-005 | 訂房重疊檢查 | ⬜ | — |
+| AC-005 | 訂房重疊檢查 | ✅ | `src/lib/booking-rules.test.ts`、`src/app/api/bookings/route.test.ts` |
 | AC-006 | Stripe 測試模式 | ⬜ | — |
 | AC-007 | ICS 匯入與 SSRF | ⬜ | — |
 | AC-008 | 安全標頭、proxy、E2E | ✅ | `src/lib/security-headers.test.ts`、`e2e/smoke.spec.ts`、`e2e/flows.spec.ts` |
