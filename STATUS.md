@@ -19,7 +19,7 @@
 | AC-006 | Stripe 測試模式 | ⬜ | — |
 | AC-007 | ICS 匯入與 SSRF | ⬜ | — |
 | AC-008 | 安全標頭、proxy、E2E | ✅ | `src/lib/security-headers.test.ts`、`e2e/smoke.spec.ts`、`e2e/flows.spec.ts` |
-| AC-009 | 已知缺陷修正 | ⬜ | — |
+| AC-009 | 已知缺陷修正 | ✅ | `src/app/api/dashboard/preload.test.ts`、`src/app/api/dashboard/summary/route.test.ts`、`src/lib/occupancy.test.ts`、`src/app/api/requirements/[id]/route.test.ts` |
 | AC-010 | 收尾與資料衛生 | ⬜ | — |
 
 ## 與 Notion「可產品化商品」的對應

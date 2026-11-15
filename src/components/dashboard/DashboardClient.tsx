@@ -32,6 +32,7 @@ import {
   IconWrench,
 } from "./icons";
 import { dashboardCopy } from "./i18n";
+import { ContractAlerts } from "./ContractAlerts";
 import type {
   DashboardSummary,
   PropertyOption,
@@ -74,6 +75,7 @@ const EMPTY_SUMMARY: DashboardSummary = {
   workbench: [],
   revenueSeries: [],
   propertyPerformance: [],
+  contractAlerts: [],
 };
 
 function occupanciesByProperty(summary: DashboardSummary): Record<string, number> {
@@ -119,10 +121,13 @@ export function DashboardClient({
   user,
   tier,
   properties,
+  preloadFailed = false,
 }: {
   user: UserLite;
   tier: Tier;
   properties: PropertyLite[];
+  /** 伺服器端預載失敗（例如資料庫連不上）；此時不顯示「尚無物業」的空狀態 */
+  preloadFailed?: boolean;
 }) {
   const searchParams = useSearchParams();
   const propertyId = searchParams.get("propertyId");
@@ -292,6 +297,9 @@ export function DashboardClient({
             <OperationalPulse summary={summary} todayDate={todayDate} />
           )}
 
+          {/* 合約到期／逾期提醒（AC-004，只在站內顯示） */}
+          <ContractAlerts alerts={summary.contractAlerts ?? []} />
+
           {/* KPI strip — 4 cards */}
           <KpiStrip kpi={summary.kpi} loading={loading} />
 
@@ -319,7 +327,15 @@ export function DashboardClient({
           <RevenueChart series={summary.revenueSeries} loading={loading} />
 
           {/* Empty state for users with no property yet */}
-          {!loading && properties.length === 0 ? (
+          {preloadFailed ? (
+            <div className="ops-error" role="alert" data-testid="preload-error">
+              <div className="ops-error-copy">
+                <strong>物業資料載入失敗</strong>
+                <span>暫時無法讀取物業清單，請稍後重新整理。</span>
+              </div>
+            </div>
+          ) : null}
+          {!loading && !preloadFailed && properties.length === 0 ? (
             <div className="ops-empty" role="status">
               <span
                 className="hp-icon-btn"

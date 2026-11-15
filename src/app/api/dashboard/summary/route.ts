@@ -8,6 +8,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { pgQuery } from "@/lib/pg-client";
+import { nextMonth, shiftDateISO, taipeiTodayISO, toTaipeiDateISO } from "@/lib/dates";
+import { deriveRoomState } from "@/lib/room-state";
+import { getOccupancyRate } from "@/lib/occupancy";
+import { getContractAlerts, CONTRACT_ALERT_WINDOW_DAYS } from "@/lib/contracts";
 
 // ----- Query validation (D7) -----
 const querySchema = z.object({
@@ -33,35 +37,8 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: "其他",
 };
 
-// ----- Date helpers (Asia/Taipei anchored) -----
-function taipeiTodayISO(): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Taipei",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
-
-function shiftDateISO(iso: string, days: number): string {
-  // iso = "YYYY-MM-DD"; produce iso + days.
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  const yy = dt.getUTCFullYear();
-  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(dt.getUTCDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
-}
-
-function nextMonthISO(month: string): string {
-  const [y, m] = month.split("-").map(Number);
-  if (m === 12) return `${y + 1}-01`;
-  return `${y}-${String(m + 1).padStart(2, "0")}`;
-}
-
+// ----- Date helpers -----
+// taipeiTodayISO／shiftDateISO／nextMonth 來自 @/lib/dates（Asia/Taipei 基準）。
 function lastNMonths(endMonth: string, n: number): string[] {
   const [y, m] = endMonth.split("-").map(Number);
   const out: string[] = [];
@@ -72,51 +49,6 @@ function lastNMonths(endMonth: string, n: number): string[] {
     );
   }
   return out;
-}
-
-// ----- Room state derivation (C2) -----
-type RoomState =
-  | "empty"
-  | "occupied"
-  | "checkout_today"
-  | "cleaning"
-  | "maintenance";
-
-function deriveRoomState(
-  propertyId: string,
-  todayStr: string,
-  yesterdayStr: string,
-  bookings: { propertyId: string; checkIn: string; checkOut: string }[],
-  activeMaint: Set<string>
-): RoomState {
-  if (activeMaint.has(propertyId)) return "maintenance";
-
-  const todays = bookings.filter(
-    (b) =>
-      b.propertyId === propertyId &&
-      String(b.checkIn).slice(0, 10) <= todayStr &&
-      String(b.checkOut).slice(0, 10) > todayStr
-  );
-  if (todays.length > 0) {
-    const isCheckout = todays.some(
-      (b) => String(b.checkOut).slice(0, 10) === todayStr
-    );
-    return isCheckout ? "checkout_today" : "occupied";
-  }
-
-  const yesterdaysCheckout = bookings.some(
-    (b) =>
-      b.propertyId === propertyId &&
-      String(b.checkOut).slice(0, 10) === yesterdayStr
-  );
-  const todayCheckin = bookings.some(
-    (b) =>
-      b.propertyId === propertyId &&
-      String(b.checkIn).slice(0, 10) === todayStr
-  );
-  if (yesterdaysCheckout && !todayCheckin) return "cleaning";
-
-  return "empty";
 }
 
 // ----- API handler -----
@@ -141,11 +73,12 @@ export async function GET(req: Request) {
   }
   const userId = session.user.id;
   const propertyFilter = parsed.data.propertyId;
-  const todayStr = taipeiTodayISO();
+  const todayStr = taipeiTodayISO(new Date());
   const yesterdayStr = shiftDateISO(todayStr, -1);
   const monthParam = parsed.data.month ?? todayStr.slice(0, 7);
   const monthStart = `${monthParam}-01`;
-  const monthEnd = `${nextMonthISO(monthParam)}-01`;
+  const monthEnd = `${nextMonth(monthParam)}-01`;
+  const tomorrowStr = shiftDateISO(todayStr, 1);
   const trendMonths = lastNMonths(monthParam, 6);
 
   // ----- Properties in scope -----
@@ -177,6 +110,7 @@ export async function GET(req: Request) {
     workbench: [],
     revenueSeries: trendMonths.map((m) => ({ month: m, total: 0 })),
     propertyPerformance: [],
+    contractAlerts: [],
   };
 
   if (properties.length === 0) {
@@ -235,21 +169,39 @@ export async function GET(req: Request) {
     [userId, propertyIdParam]
   );
 
-  // ----- Pull today's bookings + yesterday's checkouts for room derivation -----
-  const relevantBookings = await pgQuery<{
+  // ----- 取出房況、時間軸與入住率需要的訂房 -----
+  // 範圍涵蓋「昨天～明天」與「查詢月份」，前後各多抓一天以涵蓋時區邊界；精確判斷在下方以台北日期進行。
+  const fetchStart = shiftDateISO(yesterdayStr < monthStart ? yesterdayStr : monthStart, -1);
+  const fetchEnd = shiftDateISO(tomorrowStr > monthEnd ? tomorrowStr : monthEnd, 1);
+  const bookingRows = await pgQuery<{
     id: string;
     propertyId: string;
     guestName: string;
-    checkIn: string;
-    checkOut: string;
+    checkIn: Date | string;
+    checkOut: Date | string;
+    status: string;
   }>(
-    `SELECT id, "propertyId", "guestName", "checkIn", "checkOut"
+    `SELECT id, "propertyId", "guestName", "checkIn", "checkOut", status
        FROM "Booking"
       WHERE "userId" = $1
         AND "propertyId" = ANY($2::text[])
         AND status <> 'cancelled'
-        AND "checkOut" >= $3 AND "checkIn" <= $4`,
-    [userId, propertyIdParam, yesterdayStr, todayStr]
+        AND "checkOut" >= $3 AND "checkIn" < $4`,
+    [userId, propertyIdParam, fetchStart, fetchEnd]
+  );
+  // 資料庫回傳的是 Date 物件；一律轉成 Asia/Taipei 的 YYYY-MM-DD 再比較（AC-009 缺陷 2）。
+  const activeBookings = bookingRows
+    .filter((b) => b.status !== "cancelled")
+    .map((b) => ({
+      id: b.id,
+      propertyId: b.propertyId,
+      guestName: b.guestName,
+      checkIn: toTaipeiDateISO(b.checkIn, "checkIn"),
+      checkOut: toTaipeiDateISO(b.checkOut, "checkOut"),
+    }));
+  // 房況與時間軸只看昨天～今天相關的訂房
+  const relevantBookings = activeBookings.filter(
+    (b) => b.checkOut >= yesterdayStr && b.checkIn <= todayStr
   );
 
   // ----- Active maintenance (for "maintenance" room state) -----
@@ -290,9 +242,11 @@ export async function GET(req: Request) {
   };
   const totalRooms = rooms.length;
   const available = Math.max(0, totalRooms - occupancyCount.occupied - occupancyCount.cleaning - occupancyCount.maintenance);
+  // 今晚入住率：以 getOccupancyRate 計算「今天～明天」這一晚（每物業視為 1 個單位）。
+  // 今天退房的物業今晚不算入住，但房況統計仍歸在 occupied（待退房）。
   const rate = totalRooms === 0
     ? 0
-    : Math.round((occupancyCount.occupied / totalRooms) * 100);
+    : Math.round(getOccupancyRate(activeBookings, todayStr, tomorrowStr, totalRooms) * 100);
 
   // ----- Timeline (C3): today's check-ins, check-outs, cleaning markers, maintenance events -----
   type TimelineItem = {
@@ -307,8 +261,8 @@ export async function GET(req: Request) {
   const timeline: TimelineItem[] = [];
 
   for (const b of relevantBookings) {
-    const ci = String(b.checkIn).slice(0, 10);
-    const co = String(b.checkOut).slice(0, 10);
+    const ci = b.checkIn;
+    const co = b.checkOut;
     const propName = propNameById.get(b.propertyId) ?? "—";
     if (ci === todayStr) {
       timeline.push({
@@ -333,7 +287,7 @@ export async function GET(req: Request) {
       const hasFollowUp = relevantBookings.some(
         (other) =>
           other.propertyId === b.propertyId &&
-          String(other.checkIn).slice(0, 10) === todayStr
+          other.checkIn === todayStr
       );
       if (!hasFollowUp) {
         timeline.push({
@@ -458,7 +412,7 @@ export async function GET(req: Request) {
 
   // ----- Revenue series (C5): last 6 months, current month highlighted by ordering -----
   const trendStart = `${trendMonths[0]}-01`;
-  const trendEnd = `${nextMonthISO(trendMonths[trendMonths.length - 1])}-01`;
+  const trendEnd = `${nextMonth(trendMonths[trendMonths.length - 1])}-01`;
   const trendBookings = await pgQuery<{
     total: string;
     monthPrefix: string;
@@ -502,20 +456,50 @@ export async function GET(req: Request) {
   );
   const mtdMap = new Map(mtdByPropRes.map((r) => [r.propertyId, Number(r.total)]));
 
+  // 物業表現的入住率 = 查詢月份的已售晚數 ÷ 當月天數（getOccupancyRate，合併清單 #6）。
   const propertyPerformance: PropertyPerformance[] = properties.map((p) => {
-    const propRooms = rooms.filter((r) => r.propertyId === p.id);
-    const occupiedCount = propRooms.filter(
-      (r) => r.state === "occupied" || r.state === "checkout_today"
-    ).length;
-    const occupancy =
-      propRooms.length === 0
-        ? 0
-        : Math.round((occupiedCount / propRooms.length) * 100);
+    const occupancy = Math.round(
+      getOccupancyRate(
+        activeBookings.filter((b) => b.propertyId === p.id),
+        monthStart,
+        monthEnd
+      ) * 100
+    );
     return {
       id: p.id,
       name: p.name,
       mtdRevenue: mtdMap.get(p.id) ?? 0,
       occupancy,
+    };
+  });
+
+  // ----- 合約到期／逾期提醒（AC-004，FR-008；只在站內顯示） -----
+  const alertTenants = await pgQuery<{
+    id: string;
+    name: string;
+    propertyId: string;
+    endDate: Date | string | null;
+    status: string;
+  }>(
+    `SELECT id, name, "propertyId", "endDate", status
+       FROM "Tenant"
+      WHERE "userId" = $1
+        AND "propertyId" = ANY($2::text[])
+        AND status = 'active'
+        AND "endDate" IS NOT NULL
+        AND "endDate" < $3
+      ORDER BY "endDate" ASC`,
+    [userId, propertyIdParam, shiftDateISO(todayStr, CONTRACT_ALERT_WINDOW_DAYS + 2)]
+  );
+  const tenantById = new Map(alertTenants.map((t) => [t.id, t]));
+  const contractAlerts = getContractAlerts(alertTenants, new Date()).map((a) => {
+    const t = tenantById.get(a.tenantId);
+    return {
+      ...a,
+      tenantName: t?.name ?? "—",
+      propertyId: t?.propertyId ?? "",
+      propertyName: propNameById.get(t?.propertyId ?? "") ?? "—",
+      endDate: t?.endDate ? toTaipeiDateISO(t.endDate, "endDate") : null,
     };
   });
 
@@ -553,5 +537,6 @@ export async function GET(req: Request) {
     })),
     revenueSeries,
     propertyPerformance,
+    contractAlerts,
   });
 }

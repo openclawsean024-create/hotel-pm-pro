@@ -61,6 +61,18 @@ export type DashboardSummary = {
   workbench: WorkbenchItem[];
   revenueSeries: { month: string; total: number }[];
   propertyPerformance: PropertyPerformance[];
+  /** 合約到期／逾期提醒（AC-004）；舊版 API 回應可能沒有這個欄位 */
+  contractAlerts?: ContractAlertItem[];
+};
+
+export type ContractAlertItem = {
+  tenantId: string;
+  tenantName: string;
+  propertyId: string;
+  propertyName: string;
+  endDate: string | null;
+  message: string;
+  severity: "warning" | "danger";
 };
 
 export type PropertyOption = {
