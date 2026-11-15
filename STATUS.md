@@ -13,7 +13,7 @@
 |---|---|---|---|
 | AC-001 | 測試基線（Vitest、ESLint、CI 必經） | ✅ | `src/lib/ci-baseline.test.ts` |
 | AC-002 | 拆帳引擎 | ✅ | `src/lib/settlement.test.ts` |
-| AC-003 | 月報與 CSV | ⬜ | — |
+| AC-003 | 月報與 CSV | ✅ | `src/lib/csv.test.ts`、`src/lib/dates.test.ts`、`src/app/api/reports/monthly/route.test.ts` |
 | AC-004 | 合約到期／逾期提醒 | ⬜ | — |
 | AC-005 | 訂房重疊檢查 | ⬜ | — |
 | AC-006 | Stripe 測試模式 | ⬜ | — |

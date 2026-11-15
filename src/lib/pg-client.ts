@@ -1,7 +1,19 @@
 // pg-client.ts — Direct pg 套件，繞過 Prisma 的 prepared statement
 // Supabase Transaction pooler 不支援 server-side prepared statements (Prisma 預設行為)
 // 用 pg + 簡單 query 解決 Register / Contact 等簡單操作
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+/**
+ * 資料表的時間欄位是 Postgres `timestamp`（不含時區），Prisma 寫入的是 UTC。
+ * pg 預設會把它當成「執行環境的本地時間」解析：在 UTC 的伺服器（Vercel）沒差，
+ * 但在 Asia/Taipei 的開發機會差 8 小時，讓月份邊界與房況判斷出錯。
+ * 這裡固定以 UTC 解析，結果不再依賴執行環境的時區。
+ */
+export function parseUtcTimestamp(value: string): Date {
+  return new Date(`${value.replace(" ", "T")}Z`);
+}
+
+types.setTypeParser(types.builtins.TIMESTAMP, parseUtcTimestamp);
 
 const globalForPg = globalThis as unknown as {
   pg: Pool | undefined;

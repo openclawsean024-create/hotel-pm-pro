@@ -74,12 +74,24 @@ export default function ReportsPage() {
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">月報表 + 房東分潤</h1>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="input max-w-[200px]"
-          />
+          <div className="flex items-center gap-3">
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="input max-w-[200px]"
+              aria-label="月份"
+            />
+            {/* CSV 匯出（AC-003）：直接下載 API 產生的 text/csv */}
+            <a
+              href={`/api/reports/monthly?month=${month}&format=csv`}
+              download={`monthly-report-${month}.csv`}
+              className="btn-primary whitespace-nowrap"
+              data-testid="download-csv"
+            >
+              下載 CSV
+            </a>
+          </div>
         </div>
 
         {loading ? (
@@ -156,7 +168,7 @@ export default function ReportsPage() {
                             {p.bookings.map((b) => (
                               <tr key={b.id} className="border-b border-[var(--border)]/50">
                                 <td className="p-2">{b.guestName}</td>
-                                <td className="p-2 text-[var(--text-secondary)]">{b.checkIn.slice(0, 10)}</td>
+                                <td className="p-2 text-[var(--text-secondary)]">{b.checkIn}</td>
                                 <td className="p-2 text-right">NT$ {b.totalPrice.toLocaleString()}</td>
                               </tr>
                             ))}
