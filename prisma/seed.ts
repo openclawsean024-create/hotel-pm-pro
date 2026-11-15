@@ -77,7 +77,7 @@ async function main() {
   await query(
     `INSERT INTO "User" (id, email, name, "passwordHash", tier, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, 'pro', NOW(), NOW())`,
-    [userId, "demo@hotel-pm.test", "示範民宿老闆", passwordHash]
+    [userId, "demo@hotel-pm.test", "測試業者（示範帳號）", passwordHash]
   );
 
   // ---- 2. Subscription (pro / active) ----
@@ -100,7 +100,7 @@ async function main() {
       propertyZhongshanId,
       userId,
       "台北中山套房",
-      "台北市中山區中山北路二段 XX 號",
+      "台北市測試路 XX 號",
       "整層",
       28,
       45000,
@@ -117,7 +117,7 @@ async function main() {
       propertyFengjiaId,
       userId,
       "台中逢甲雅房",
-      "台中市西屯區文華路 XX 號",
+      "台中市測試路 XX 號",
       "雅房",
       10,
       18000,
@@ -131,13 +131,13 @@ async function main() {
     `INSERT INTO "Tenant"
        (id, "userId", "propertyId", name, phone, email, "startDate", "endDate",
         "monthlyRent", deposit, status, "createdAt", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, NOW() - INTERVAL '3 months', NULL, $7, $8, 'active', NOW(), NOW())`,
+     VALUES ($1, $2, $3, $4, $5, $6, NOW() - INTERVAL '3 months', NOW() + INTERVAL '20 days', $7, $8, 'active', NOW(), NOW())`,
     [
       tenantZhongshanId,
       userId,
       propertyZhongshanId,
-      "王小明",
-      "0912345678",
+      "測試房客A",
+      "0900-000-001",
       null,
       45000,
       90000,
@@ -154,8 +154,8 @@ async function main() {
       tenantFengjiaId,
       userId,
       propertyFengjiaId,
-      "李小華",
-      "0923456789",
+      "測試房客B",
+      "0900-000-002",
       null,
       18000,
       36000,
@@ -168,7 +168,7 @@ async function main() {
     `INSERT INTO "Booking"
        (id, "userId", "propertyId", "guestName", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5::date, $6::date, 'manual', $7, 'confirmed', NOW(), NOW())`,
-    [cuid(), userId, propertyZhongshanId, "陳先生", "2026-12-20", "2026-12-22", 6800]
+    [cuid(), userId, propertyZhongshanId, "測試旅客A", "2026-12-20", "2026-12-22", 6800]
   );
 
   // 中山：林小姐 2026-12-31 ~ 2027-01-02 NT$7200
@@ -176,7 +176,7 @@ async function main() {
     `INSERT INTO "Booking"
        (id, "userId", "propertyId", "guestName", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5::date, $6::date, 'manual', $7, 'confirmed', NOW(), NOW())`,
-    [cuid(), userId, propertyZhongshanId, "林小姐", "2026-12-31", "2027-01-02", 7200]
+    [cuid(), userId, propertyZhongshanId, "測試旅客B", "2026-12-31", "2027-01-02", 7200]
   );
 
   // 逢甲：張先生 2026-12-25 ~ 2026-12-27 NT$4200
@@ -184,7 +184,7 @@ async function main() {
     `INSERT INTO "Booking"
        (id, "userId", "propertyId", "guestName", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5::date, $6::date, 'manual', $7, 'confirmed', NOW(), NOW())`,
-    [cuid(), userId, propertyFengjiaId, "張先生", "2026-12-25", "2026-12-27", 4200]
+    [cuid(), userId, propertyFengjiaId, "測試旅客C", "2026-12-25", "2026-12-27", 4200]
   );
 
   // 逢甲：黃小姐 2027-01-15 ~ 2027-01-17 NT$4200
@@ -192,7 +192,7 @@ async function main() {
     `INSERT INTO "Booking"
        (id, "userId", "propertyId", "guestName", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
      VALUES ($1, $2, $3, $4, $5::date, $6::date, 'manual', $7, 'confirmed', NOW(), NOW())`,
-    [cuid(), userId, propertyFengjiaId, "黃小姐", "2027-01-15", "2027-01-17", 4200]
+    [cuid(), userId, propertyFengjiaId, "測試旅客D", "2027-01-15", "2027-01-17", 4200]
   );
 
   // ---- 6. Requirements (2) ----
@@ -242,8 +242,8 @@ async function main() {
       cuid(),
       userId,
       propertyZhongshanId,
-      "水電行阿明師傅",
-      "0987654321",
+      "測試水電行",
+      "0900-000-003",
       "冷氣維修",
       "中山套房主臥冷氣壓縮機異音維修，預估換電容 + 清洗。",
       2500,

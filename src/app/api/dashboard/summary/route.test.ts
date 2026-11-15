@@ -346,3 +346,70 @@ describe("AC-009 總覽 API 基本行為", () => {
     }
   });
 });
+
+describe("AC-004 總覽提醒區：合約到期／逾期（contractAlerts）", () => {
+  const tenants = [
+    { id: "t1", name: "測試房客A", propertyId: "p1", endDate: utc("2026-11-30"), status: "active" },
+    { id: "t2", name: "測試房客B", propertyId: "p2", endDate: utc("2026-11-01"), status: "active" },
+    { id: "t3", name: "測試房客C", propertyId: "p1", endDate: utc("2026-11-16"), status: "active" },
+  ];
+
+  it("AC-004 回傳 30 天內到期與已逾期的房客，含房客與物業名稱", async () => {
+    installSqlRouter(pg, rules({ tenants }));
+    const { body } = await getSummary();
+    expect(body.contractAlerts).toEqual([
+      {
+        tenantId: "t1",
+        message: "合約將於 14 天內到期",
+        severity: "warning",
+        tenantName: "測試房客A",
+        propertyId: "p1",
+        propertyName: "測試物業A",
+        endDate: "2026-11-30",
+      },
+      {
+        tenantId: "t2",
+        message: "合約已逾期 15 天",
+        severity: "danger",
+        tenantName: "測試房客B",
+        propertyId: "p2",
+        propertyName: "測試物業B",
+        endDate: "2026-11-01",
+      },
+      {
+        tenantId: "t3",
+        message: "合約今天到期",
+        severity: "warning",
+        tenantName: "測試房客C",
+        propertyId: "p1",
+        propertyName: "測試物業A",
+        endDate: "2026-11-16",
+      },
+    ]);
+  });
+
+  it("AC-004 查詢只取自己的、租賃中、有 endDate 且在提醒範圍內的房客", async () => {
+    const db = installSqlRouter(pg, rules({ tenants: [] }));
+    await getSummary();
+    const q = db.find(/FROM "Tenant"/)[0];
+    expect(q.sql).toMatch(/"userId" = \$1/);
+    expect(q.sql).toMatch(/status = 'active'/);
+    expect(q.sql).toMatch(/"endDate" IS NOT NULL/);
+    expect(q.params).toEqual([TEST_USER.id, ["p1", "p2"], "2026-12-18"]);
+  });
+
+  it("AC-004 沒有需要提醒的房客時回空陣列；沒有物業時也回空陣列", async () => {
+    installSqlRouter(pg, rules({ tenants: [] }));
+    expect((await getSummary()).body.contractAlerts).toEqual([]);
+    installSqlRouter(pg, rules({ properties: [], tenants }));
+    expect((await getSummary()).body.contractAlerts).toEqual([]);
+  });
+
+  it("AC-004 超過 30 天才到期的房客即使被查出來也不提醒", async () => {
+    installSqlRouter(
+      pg,
+      rules({ tenants: [{ id: "t9", name: "測試房客D", propertyId: "p1", endDate: utc("2026-12-17"), status: "active" }] }),
+    );
+    expect((await getSummary()).body.contractAlerts).toEqual([]);
+  });
+});
