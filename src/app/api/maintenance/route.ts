@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   const status = searchParams.get("status");
 
   let query = `SELECT id, "userId", "propertyId", "requirementId", "vendorName", "vendorPhone", "vendorEmail", title, description, "estimatedCost", "actualCost", "startDate", "endDate", "completedAt", status, notes, "createdAt" FROM "Maintenance" WHERE "userId" = $1`;
-  const params: any[] = [session.user.id];
+  const params: unknown[] = [session.user.id];
 
   if (propertyId) {
     query += ` AND "propertyId" = $2`;

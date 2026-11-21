@@ -22,7 +22,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const updates: string[] = [];
-  const values: any[] = [];
+  const values: unknown[] = [];
   let idx = 1;
 
   if (status !== undefined) {

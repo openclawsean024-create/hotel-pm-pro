@@ -1,0 +1,28 @@
+BEGIN:VCALENDAR
+PRODID:-//Fake Airbnb Fixture//Hosting Calendar 0.0.1//EN
+CALSCALE:GREGORIAN
+VERSION:2.0
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20270105
+DTSTART;VALUE=DATE:20270102
+UID:fake-airbnb-0001@fixture.hotel-pm.test
+DESCRIPTION:Reservation URL: https://calendar.example.test/hosting/reserva
+ tions/details/FAKECODE01\nPhone Number (Last 4 Digits): 0000
+SUMMARY:Reserved
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20270112
+DTSTART;VALUE=DATE:20270110
+UID:fake-airbnb-0002@fixture.hotel-pm.test
+SUMMARY:Airbnb (Not available)
+END:VEVENT
+BEGIN:VEVENT
+DTEND;VALUE=DATE:20270120
+DTSTART;VALUE=DATE:20270118
+UID:fake-airbnb-0003-with-a-very-long-identifier-that-gets-folded-by-the-ex
+ porter@fixture.hotel-pm.test
+DESCRIPTION:Reservation URL: https://calendar.example.test/hosting/reserva
+ tions/details/FAKECODE03\nPhone Number (Last 4 Digits): 0000
+SUMMARY:Reserved
+END:VEVENT
+END:VCALENDAR

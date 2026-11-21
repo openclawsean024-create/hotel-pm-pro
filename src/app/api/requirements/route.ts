@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const bookingId = searchParams.get("bookingId");
 
   let query = `SELECT id, \"userId\", \"propertyId\", \"tenantId\", \"bookingId\", category, title, description, priority, status, \"createdAt\" FROM \"Requirement\" WHERE \"userId\" = $1`;
-  const params: any[] = [session.user.id];
+  const params: unknown[] = [session.user.id];
 
   if (propertyId) {
     query += ` AND \"propertyId\" = $2`;

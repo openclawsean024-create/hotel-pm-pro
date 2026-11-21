@@ -1,10 +1,11 @@
 // app/dashboard/tenants/page.tsx — F-M2 房客 CRM
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
 import Link from "next/link";
+import { getContractAlerts, type ContractAlert } from "@/lib/contracts";
 
 interface Tenant {
   id: string;
@@ -22,7 +23,7 @@ interface Tenant {
 interface Property { id: string; name: string; }
 
 export default function TenantsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -34,13 +35,7 @@ export default function TenantsPage() {
   });
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    else if (status === "authenticated") loadAll();
-  }, [status, router]);
-
-  async function loadAll() {
-    setLoading(true);
+  const loadAll = useCallback(async () => {
     try {
       const [t, p] = await Promise.all([
         fetch("/api/tenants").then((r) => r.json()),
@@ -48,15 +43,19 @@ export default function TenantsPage() {
       ]);
       setTenants(t.tenants ?? []);
       setProperties(p.properties ?? []);
-      if (!form.propertyId && p.properties?.[0]) {
-        setForm((f) => ({ ...f, propertyId: p.properties[0].id }));
-      }
+      const first = p.properties?.[0];
+      if (first) setForm((f) => (f.propertyId ? f : { ...f, propertyId: first.id }));
     } catch {
       setError("載入失敗");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+    else if (status === "authenticated") void loadAll();
+  }, [status, router, loadAll]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -101,6 +100,17 @@ export default function TenantsPage() {
 
   const propName = (id: string) => properties.find((p) => p.id === id)?.name ?? "—";
 
+  // 合約到期／逾期提醒（AC-004，FR-008）：30 天內到期與已逾期，只在站內顯示。
+  let alerts: ContractAlert[] = [];
+  try {
+    alerts = getContractAlerts(tenants, new Date());
+  } catch {
+    alerts = [];
+  }
+  const alertByTenant = new Map(alerts.map((a) => [a.tenantId, a]));
+  const overdueCount = alerts.filter((a) => a.severity === "danger").length;
+  const expiringCount = alerts.length - overdueCount;
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-[var(--border)]">
@@ -136,6 +146,20 @@ export default function TenantsPage() {
         {error && (
           <div className="mb-4 p-3 rounded-md bg-[var(--danger)]/10 border border-[var(--danger)]/30 text-sm text-[var(--danger)]">
             {error}
+          </div>
+        )}
+
+        {alerts.length > 0 && (
+          <div
+            className="mb-4 p-3 rounded-md bg-[var(--gold)]/10 border border-[var(--gold)]/30 text-sm"
+            role="status"
+            data-testid="contract-alert-summary"
+          >
+            <strong>合約提醒：</strong>
+            {overdueCount > 0 && <span className="text-[var(--danger)]"> {overdueCount} 位房客合約已逾期</span>}
+            {overdueCount > 0 && expiringCount > 0 && "，"}
+            {expiringCount > 0 && <span> {expiringCount} 位房客合約將在 30 天內到期</span>}
+            。
           </div>
         )}
 
@@ -194,6 +218,7 @@ export default function TenantsPage() {
                   <th className="text-left p-3">電話</th>
                   <th className="text-left p-3">物業</th>
                   <th className="text-left p-3">起租日</th>
+                  <th className="text-left p-3">退租日</th>
                   <th className="text-right p-3">月租</th>
                   <th className="text-center p-3">狀態</th>
                   <th className="text-right p-3">操作</th>
@@ -206,6 +231,18 @@ export default function TenantsPage() {
                     <td className="p-3 text-[var(--text-secondary)]">{t.phone}</td>
                     <td className="p-3 text-[var(--text-secondary)]">{propName(t.propertyId)}</td>
                     <td className="p-3 text-[var(--text-secondary)]">{t.startDate.slice(0, 10)}</td>
+                    <td className="p-3 text-[var(--text-secondary)]">
+                      {t.endDate ? t.endDate.slice(0, 10) : "—"}
+                      {alertByTenant.get(t.id) && (
+                        <span
+                          data-testid="contract-alert"
+                          data-severity={alertByTenant.get(t.id)!.severity}
+                          className={`ml-2 text-xs px-2 py-0.5 rounded ${alertByTenant.get(t.id)!.severity === "danger" ? "bg-[var(--danger)]/10 text-[var(--danger)]" : "bg-[var(--gold)]/10 text-[var(--gold)]"}`}
+                        >
+                          {alertByTenant.get(t.id)!.message}
+                        </span>
+                      )}
+                    </td>
                     <td className="p-3 text-right">NT$ {t.monthlyRent.toLocaleString()}</td>
                     <td className="p-3 text-center">
                       <span className={`text-xs px-2 py-0.5 rounded ${t.status === "active" ? "bg-[var(--success)]/10 text-[var(--success)]" : "bg-[var(--text-muted)]/10 text-[var(--text-muted)]"}`}>

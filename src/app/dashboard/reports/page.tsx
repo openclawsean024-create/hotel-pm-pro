@@ -1,6 +1,6 @@
 // app/dashboard/reports/page.tsx — F-M6 月報表 + 自動拆帳
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
@@ -16,7 +16,7 @@ interface ReportProperty {
   totalIncome: number;
   ownerShareAmount: number;
   operatorShare: number;
-  bookings: any[];
+  bookings: { id: string; guestName: string; checkIn: string; totalPrice: number }[];
 }
 
 interface Report {
@@ -35,12 +35,7 @@ export default function ReportsPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    else if (status === "authenticated") loadReport();
-  }, [status, month, router]);
-
-  async function loadReport() {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/reports/monthly?month=${month}`);
@@ -52,7 +47,12 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [month]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+    else if (status === "authenticated") void loadReport();
+  }, [status, router, loadReport]);
 
   if (status === "loading") {
     return <div className="min-h-screen flex items-center justify-center">載入中...</div>;
@@ -74,12 +74,24 @@ export default function ReportsPage() {
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">月報表 + 房東分潤</h1>
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="input max-w-[200px]"
-          />
+          <div className="flex items-center gap-3">
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="input max-w-[200px]"
+              aria-label="月份"
+            />
+            {/* CSV 匯出（AC-003）：直接下載 API 產生的 text/csv */}
+            <a
+              href={`/api/reports/monthly?month=${month}&format=csv`}
+              download={`monthly-report-${month}.csv`}
+              className="btn-primary whitespace-nowrap"
+              data-testid="download-csv"
+            >
+              下載 CSV
+            </a>
+          </div>
         </div>
 
         {loading ? (
@@ -153,10 +165,10 @@ export default function ReportsPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {p.bookings.map((b: any) => (
+                            {p.bookings.map((b) => (
                               <tr key={b.id} className="border-b border-[var(--border)]/50">
                                 <td className="p-2">{b.guestName}</td>
-                                <td className="p-2 text-[var(--text-secondary)]">{b.checkIn.slice(0, 10)}</td>
+                                <td className="p-2 text-[var(--text-secondary)]">{b.checkIn}</td>
                                 <td className="p-2 text-right">NT$ {b.totalPrice.toLocaleString()}</td>
                               </tr>
                             ))}

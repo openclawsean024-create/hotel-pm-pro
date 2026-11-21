@@ -35,7 +35,7 @@ export function TodayTimeline({ events, loading }: Props) {
       <header className="card-header">
         <div>
           <h2 id="today-title" className="card-title">
-            今日營運 · Today's operations
+            今日營運 · Today&apos;s operations
           </h2>
           <p className="card-subtitle">入住 / 退房 / 清潔 / 維修</p>
         </div>

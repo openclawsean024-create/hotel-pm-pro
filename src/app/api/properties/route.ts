@@ -19,7 +19,7 @@ export async function GET() {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
   }
 
-  const properties = await pgQuery<any>(
+  const properties = await pgQuery(
     `SELECT id, name, address, "roomType", area, "monthlyRent", "ownerShare",
             "userId", "createdAt", "updatedAt"
      FROM "Property"
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     [id, name, address, roomType, area ?? null, monthlyRent, ownerShare, session.user.id]
   );
 
-  const created = await pgQueryOne<any>(
+  const created = await pgQueryOne(
     `SELECT * FROM "Property" WHERE id = $1`,
     [id]
   );

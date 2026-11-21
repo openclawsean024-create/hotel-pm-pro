@@ -1,6 +1,8 @@
 # 民宿管家 hotel-pm
 
-> **台灣民宿 / 包租代管專用 PMS** — 月費 NT$499 起，比 Cloudbeds 便宜 80%，比 Excel 簡單 10 倍。
+> **台灣民宿 / 包租代管專用 PMS** — 物業、房客、訂房、月報與房東拆帳。
+>
+> 本 README 只描述程式目前實際有的行為；規格與里程碑見 [`PRD/SPEC.md`](PRD/SPEC.md)、[`GOAL.md`](GOAL.md)，目前狀態見 [`STATUS.md`](STATUS.md)。
 
 民宿管家是為台灣小型民宿業者、包租代管公司設計的雲端物業管理系統（PMS, Property Management System）。整合物業、房客、訂房、需求、維修、月報表於一站，並以 Stripe 訂閱制提供 Free / Pro / Business 三種方案。
 
@@ -11,13 +13,16 @@
 | 功能 | 說明 |
 |---|---|
 | 🏘️ **物業管理** | 地址、房型、坪數、月租金、房東分潤比例一站管理 |
-| 👥 **房客 CRM** | 租約期間、聯絡方式、月繳通知、押金追蹤 |
-| 📅 **訂房看板** | 手動新增或從 Airbnb / Booking.com ICS 自動匯入 |
+| 👥 **房客 CRM** | 租約期間、聯絡方式、押金；合約 30 天內到期與已逾期的站內提醒（不寄 Email 或 LINE） |
+| 📅 **訂房看板** | 手動新增；同一物業日期重疊的訂房會被擋下（相鄰不算重疊） |
 | 🛠️ **需求記錄** | 房客反應的維修、特別需求、清潔備註，附優先級與處理狀態 |
 | 🔧 **維修派工** | 廠商聯絡、估價、實際費用、起訖日，附需求單關聯 |
-| 📆 **ICS 自動匯入** | 解析外部行事曆連結，去重匯入到訂房看板 |
-| 📊 **月報表** | 一鍵匯出 PDF 給會計師與房東的拆帳單 |
-| 💳 **Stripe 訂閱** | 整合 Checkout 與 Webhook，管理 Pro / Business 訂閱狀態 |
+| 📆 **ICS 匯入** | 手動貼上 https 的 iCal 連結匯入並轉成訂房（以 UID 去重、重疊時不建立並提示）；不會定期自動同步 |
+| 📊 **月報表** | 月租 + 當月已完成訂房，依房東分潤比例拆帳；可下載 CSV（沒有 PDF） |
+| 💳 **Stripe 訂閱** | Checkout 與 Webhook（目前只在測試模式驗證）；方案用量限制尚未實作 |
+
+> 目前**暫停開放公開註冊**（`/register` 轉到登入頁、註冊 API 回 410），何時重開待決定。
+> 後台路由由 `src/proxy.ts`（Next.js 16 的 middleware 慣例）保護，未登入一律轉到 `/login`；各 API 也各自檢查登入。
 
 ---
 
@@ -32,6 +37,8 @@
 - **Validation**: [Zod 4](https://zod.dev/)
 - **Password Hash**: [bcryptjs 3](https://www.npmjs.com/package/bcryptjs)
 - **Language**: [TypeScript 5](https://www.typescriptlang.org/)
+- **Test**: [Vitest](https://vitest.dev/)（單元與 route handler 測試）、[Playwright](https://playwright.dev/)（E2E）
+- **Lint**: ESLint 9（`eslint-config-next`）
 
 ---
 
@@ -39,7 +46,7 @@
 
 開始前請先確認本機有以下工具：
 
-- **Node.js 20+**（建議 22 LTS，專案在 v22.23.2 開發）
+- **Node.js 20+**（CI 使用 Node 20）
 - **npm 10+**（隨 Node 22 內建）
 - **PostgreSQL 14+** 連線字串（推薦用 [Supabase](https://supabase.com/) 免費方案）
 - **Stripe 測試帳號**（拿 test mode 的 `sk_test_*` 與 `whsec_*`）
@@ -79,7 +86,7 @@ cp .env.example .env
 ### 3. 安裝相依
 
 ```bash
-npm install
+npm ci --legacy-peer-deps
 ```
 
 ### 4. 套用 Prisma schema 到資料庫
@@ -104,7 +111,7 @@ npm run seed
 - 2 個房客
 - 4 筆訂房、2 筆需求、1 筆維修派工
 
-> 跑第二次會自動跳過（idempotent），不會 error 也不會重複建。
+> 跑第二次會自動跳過（idempotent），不會 error 也不會重複建。所有 seed 資料都是明顯的假資料（`測試房客A`、`0900-000-001`、`台北市測試路 XX 號`）。
 
 ### 6. 啟動開發伺服器
 
@@ -159,9 +166,10 @@ Password: Password123!
 
 1. 部署完成後，到 [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/test/webhooks) 新增 endpoint
    - URL: `https://你的網域/api/stripe/webhook`
-   - Events: `checkout.session.completed`、`customer.subscription.updated`、`customer.subscription.deleted`、`invoice.paid`
+   - Events: `checkout.session.completed`、`customer.subscription.updated`、`customer.subscription.deleted`、`invoice.paid`、`invoice.payment_failed`
+   - 非 production 環境若 `STRIPE_SECRET_KEY` 是 `sk_live_` 開頭，checkout 與 webhook 會拒絕執行
 2. 把產生的 `whsec_*` 填到 Vercel 的 `STRIPE_WEBHOOK_SECRET` 環境變數
-3. 切回 test mode 測試一次 checkout → 確認 dashboard 訂閱狀態正確更新
+3. 在 test mode 測試一次 checkout → 確認 dashboard 訂閱狀態正確更新（切換正式模式需另行人審）
 
 ### 本地 Webhook 測試
 
@@ -181,7 +189,10 @@ npm run dev        # 啟動 dev server（Turbopack，HMR）
 npm run build      # production build（需 8 個 env 餵好）
 npm run start      # 啟動 production server
 npm run seed       # 跑 seed script（需 DATABASE_URL）
-npx tsc --noEmit   # typecheck
+npm run typecheck  # tsc --noEmit
+npm run lint       # ESLint
+npm test           # Vitest（不需資料庫、不連 Stripe）
+npm run test:e2e   # Playwright（自行 build + start，不需資料庫）
 npx prisma studio  # 開 GUI 看資料
 ```
 
@@ -199,7 +210,6 @@ npx prisma studio  # 開 GUI 看資料
 - Email：請透過站內表單留言，會有專人在 1-2 個工作天內回覆
 - Issue：本 repo 的 GitHub Issues
 
-> Pro 方案用戶享有 Email 客服（24hr 內回覆）；Business 方案享有優先客服（24hr 內回覆）+ Slack channel。
 
 ---
 

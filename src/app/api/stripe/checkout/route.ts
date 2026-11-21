@@ -1,17 +1,9 @@
-// app/api/stripe/checkout/route.ts (用 pg)
+// app/api/stripe/checkout/route.ts — 建立 Stripe Checkout Session（AC-006，FR-022；僅測試模式）
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { auth } from "@/lib/auth";
 import { pgQuery, pgQueryOne } from "@/lib/pg-client";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder", {
-  apiVersion: "2026-07-29.dahlia",
-});
-
-const PRICE_IDS: Record<string, string | undefined> = {
-  pro: process.env.STRIPE_PRICE_PRO,
-  business: process.env.STRIPE_PRICE_BUSINESS,
-};
+import { getStripe, isPaidPlan, priceIdForPlan, StripeConfigError } from "@/lib/stripe";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -19,13 +11,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "未登入" }, { status: 401 });
   }
 
-  const { plan } = await req.json();
-  const priceId = PRICE_IDS[plan];
-  if (!priceId) {
+  // 金鑰防呆：非 production 環境拿到 sk_live_ 金鑰時拒絕執行（不呼叫 Stripe、不查資料庫）。
+  let stripe: Stripe;
+  try {
+    stripe = getStripe();
+  } catch (err) {
+    if (err instanceof StripeConfigError) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
+    throw err;
+  }
+
+  let body: { plan?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "無效的 JSON 內容" }, { status: 400 });
+  }
+  const plan = body?.plan;
+  const priceId = isPaidPlan(plan) ? priceIdForPlan(plan) : null;
+  if (!isPaidPlan(plan) || !priceId) {
     return NextResponse.json({ error: "無效的方案" }, { status: 400 });
   }
 
-  let user = await pgQueryOne<any>(
+  const user = await pgQueryOne<{ id: string; email: string; name: string | null; stripeCustomerId: string | null }>(
     `SELECT id, email, name, "stripeCustomerId" FROM "User" WHERE id = $1`,
     [session.user.id]
   );
@@ -47,13 +56,15 @@ export async function POST(req: Request) {
     );
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/dashboard?upgraded=1`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/pricing?canceled=1`,
+    success_url: `${appUrl}/dashboard?upgraded=1`,
+    cancel_url: `${appUrl}/pricing?canceled=1`,
     metadata: { userId: user.id, plan },
+    subscription_data: { metadata: { userId: user.id, plan } },
   });
 
   return NextResponse.json({ url: checkoutSession.url });

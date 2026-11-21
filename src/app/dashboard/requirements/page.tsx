@@ -1,6 +1,6 @@
-// app/dashboard/requirements/page.tsx — F-M4 需求記錄 (minimal compile version)
+// app/dashboard/requirements/page.tsx — F-M4 需求記錄（建立／編輯／狀態更新／刪除，FR-014）
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
@@ -11,15 +11,24 @@ interface Requirement {
   propertyId: string;
   category: string;
   title: string;
+  description: string;
   priority: string;
   status: string;
   createdAt: string;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  open: "待處理",
+  in_progress: "處理中",
+  resolved: "已解決",
+  closed: "已結案",
+};
+const PRIORITY_LABEL: Record<string, string> = { low: "低", normal: "中", high: "高", urgent: "急" };
+
 interface Property { id: string; name: string; }
 
 export default function RequirementsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -33,14 +42,11 @@ export default function RequirementsPage() {
     priority: "normal",
   });
   const [error, setError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", priority: "normal", status: "open" });
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    else if (status === "authenticated") loadAll();
-  }, [status, router]);
-
-  async function loadAll() {
-    setLoading(true);
+  const loadAll = useCallback(async () => {
     try {
       const [r, p] = await Promise.all([
         fetch("/api/requirements").then((r) => r.json()),
@@ -48,15 +54,19 @@ export default function RequirementsPage() {
       ]);
       setRequirements(r.requirements ?? []);
       setProperties(p.properties ?? []);
-      if (!form.propertyId && p.properties?.[0]) {
-        setForm({ ...form, propertyId: p.properties[0].id });
-      }
+      const first = p.properties?.[0];
+      if (first) setForm((f) => (f.propertyId ? f : { ...f, propertyId: first.id }));
     } catch {
       setError("載入失敗");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+    else if (status === "authenticated") void loadAll();
+  }, [status, router, loadAll]);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -77,6 +87,43 @@ export default function RequirementsPage() {
     } catch {
       setError("新增失敗");
     }
+  }
+
+  function startEdit(r: Requirement) {
+    setError("");
+    setEditingId(r.id);
+    setEditForm({ title: r.title, description: r.description ?? "", priority: r.priority, status: r.status });
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setError("");
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/requirements/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "儲存失敗");
+        return;
+      }
+      setEditingId(null);
+      await loadAll();
+    } catch {
+      setError("儲存失敗");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("確定刪除此需求？")) return;
+    await fetch(`/api/requirements/${id}`, { method: "DELETE" });
+    await loadAll();
   }
 
   if (status === "loading" || loading) {
@@ -159,21 +206,52 @@ export default function RequirementsPage() {
                 <th className="text-left p-3">物業</th>
                 <th className="text-left p-3">類別</th>
                 <th className="text-left p-3">標題</th>
+                <th className="text-left p-3">優先級</th>
                 <th className="text-left p-3">狀態</th>
                 <th className="text-right p-3">操作</th>
               </tr></thead>
               <tbody>
-                {requirements.map(r => (
+                {requirements.map(r => editingId === r.id ? (
+                  <tr key={r.id} className="border-b border-[var(--border)]/50" data-testid="requirement-edit-row">
+                    <td colSpan={6} className="p-3">
+                      <form onSubmit={handleSave} className="grid gap-3 sm:grid-cols-2" aria-label="編輯需求">
+                        <div className="sm:col-span-2">
+                          <label className="label" htmlFor="edit-title">標題</label>
+                          <input id="edit-title" className="input" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} required maxLength={200} />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="label" htmlFor="edit-description">描述</label>
+                          <textarea id="edit-description" className="input" rows={3} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} required />
+                        </div>
+                        <div>
+                          <label className="label" htmlFor="edit-priority">優先級</label>
+                          <select id="edit-priority" className="input" value={editForm.priority} onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}>
+                            <option value="low">低</option><option value="normal">中</option><option value="high">高</option><option value="urgent">急</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="label" htmlFor="edit-status">狀態</label>
+                          <select id="edit-status" className="input" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                            <option value="open">待處理</option><option value="in_progress">處理中</option><option value="resolved">已解決</option><option value="closed">已結案</option>
+                          </select>
+                        </div>
+                        <div className="sm:col-span-2 flex gap-2">
+                          <button type="submit" className="btn-primary" disabled={saving}>{saving ? "儲存中..." : "儲存"}</button>
+                          <button type="button" className="btn-ghost" onClick={() => setEditingId(null)}>取消</button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                ) : (
                   <tr key={r.id} className="border-b border-[var(--border)]/50">
                     <td className="p-3 text-[var(--text-secondary)]">{propName(r.propertyId)}</td>
                     <td className="p-3">{catText(r.category)}</td>
                     <td className="p-3 font-medium">{r.title}</td>
-                    <td className="p-3">{r.status}</td>
-                    <td className="p-3 text-right">
-                      <button className="text-xs text-[var(--danger)] hover:underline" onClick={() => {
-                        fetch(`/api/requirements/${r.id}`, { method: "DELETE" });
-                        loadAll();
-                      }}>刪除</button>
+                    <td className="p-3">{PRIORITY_LABEL[r.priority] ?? r.priority}</td>
+                    <td className="p-3">{STATUS_LABEL[r.status] ?? r.status}</td>
+                    <td className="p-3 text-right whitespace-nowrap">
+                      <button className="text-xs text-[var(--accent)] hover:underline mr-3" onClick={() => startEdit(r)}>編輯</button>
+                      <button className="text-xs text-[var(--danger)] hover:underline" onClick={() => handleDelete(r.id)}>刪除</button>
                     </td>
                   </tr>
                 ))}

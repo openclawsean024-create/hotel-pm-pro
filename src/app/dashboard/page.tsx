@@ -1,23 +1,11 @@
 // app/dashboard/page.tsx — Operations Dashboard
 // Visual direction adopted 2026-09-24 per docs/ui-redesign-review-2026-09-24.md
-// Preserves PRD/SPEC §1.3 scope: no OTA channel manager, hardware, payments,
-// or other new back-end surface. Loads data from /api/dashboard/summary
-// (existing) and renders an Operations Dashboard with international SaaS
-// visual language (graphite nav, orange action, violet analytics, neutral
-// canvas).
+// Loads data from /api/dashboard/summary and renders an Operations Dashboard.
 import { auth } from "@/lib/auth";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { pgQuery } from "@/lib/pg-client";
+import { loadDashboardPreload, type DashboardPreload } from "@/lib/dashboard-preload";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
-
-type PropertyRow = {
-  id: string;
-  name: string;
-  roomType: string;
-  roomsCount: number;
-  ownerShare: number | null; // 0..100 (Int in DB)
-};
 
 export const dynamic = "force-dynamic";
 
@@ -27,34 +15,19 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Read the portfolio + tier so the first paint avoids a flash of empty state.
-  // Stays within SPEC §1.3: the page keeps parity with the existing
-  // /api/dashboard/summary route and only adds a server-side prefetch.
-  let properties: PropertyRow[] = [];
-  let userRow: { tier: string | null; name: string | null; email: string | null } | null = null;
+  // 伺服器端預載物業與方案，讓第一次繪製不會閃一下空狀態（AC-009 缺陷 1）。
+  // 預載失敗時不讓整頁壞掉，但要記錄錯誤並告訴使用者，不能假裝「沒有物業」。
+  let preload: DashboardPreload = { properties: [], user: null };
+  let preloadFailed = false;
   try {
-    [properties, userRow] = await Promise.all([
-      pgQuery<PropertyRow>(
-        `SELECT p.id,
-                p.name,
-                p."roomType" AS "roomType",
-                COALESCE((SELECT COUNT(*) FROM "Room" r WHERE r."propertyId" = p.id), 0)::int AS "roomsCount",
-                p."ownerShare" AS "ownerShare"
-           FROM "Property" p
-          WHERE p."userId" = $1
-          ORDER BY p.name ASC
-          LIMIT 200`,
-        [session.user.id],
-      ),
-      pgQuery<{ tier: string; name: string | null; email: string }>(
-        `SELECT tier, name, email FROM "User" WHERE id = $1 LIMIT 1`,
-        [session.user.id],
-      ).then((rows) => rows[0] ?? null),
-    ]);
-  } catch {
-    // Demo environment / pg unreachable — fall back to empty state rather than crash.
-    properties = [];
-    userRow = null;
+    preload = await loadDashboardPreload(session.user.id);
+  } catch (err) {
+    preloadFailed = true;
+    // 只記錄錯誤類型與訊息，不輸出查詢參數或個資。
+    console.error(
+      "[dashboard] 伺服器端預載失敗：",
+      err instanceof Error ? `${err.name}: ${err.message}` : "unknown error",
+    );
   }
 
   return (
@@ -67,11 +40,12 @@ export default async function DashboardPage() {
     >
       <DashboardClient
         user={{
-          email: session.user.email ?? userRow?.email ?? null,
-          name: session.user.name ?? userRow?.name ?? null,
+          email: session.user.email ?? preload.user?.email ?? null,
+          name: session.user.name ?? preload.user?.name ?? null,
         }}
-        tier={(userRow?.tier ?? "free") as "free" | "pro" | "business"}
-        properties={properties}
+        tier={(preload.user?.tier ?? "free") as "free" | "pro" | "business"}
+        properties={preload.properties}
+        preloadFailed={preloadFailed}
       />
     </Suspense>
   );
