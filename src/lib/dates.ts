@@ -80,3 +80,8 @@ export function isInTaipeiMonth(value: DateInput, month: string, fieldName = "da
   const { start, end } = taipeiMonthRangeUtc(month);
   return t >= start.getTime() && t < end.getTime();
 }
+
+/** Asia/Taipei 某一天 00:00 對應的 UTC 時間（ISO 字串），用於 SQL 的日界線參數。 */
+export function taipeiDayStartUtcISO(dateISO: string): string {
+  return new Date(`${dateISO}T00:00:00+08:00`).toISOString();
+}

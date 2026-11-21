@@ -61,3 +61,8 @@ export function planFromPriceId(priceId: string | null | undefined, env: Env = p
   if (env.STRIPE_PRICE_BUSINESS && priceId === env.STRIPE_PRICE_BUSINESS) return "business";
   return null;
 }
+
+/** 從 Stripe 取得訂閱的最新狀態（webhook 以這份為準，不信任事件內容的順序）。 */
+export function fetchSubscription(stripe: Stripe, subscriptionId: string): Promise<Stripe.Subscription> {
+  return stripe.subscriptions.retrieve(subscriptionId);
+}

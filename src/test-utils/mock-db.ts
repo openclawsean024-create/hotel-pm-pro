@@ -63,3 +63,26 @@ export function jsonRequest(url: string, method: string, body?: unknown): Reques
 export const routeParams = (id: string) => ({ params: Promise.resolve({ id }) });
 
 export { vi };
+
+/**
+ * 讓被 mock 的 withTransaction 直接把查詢轉給被 mock 的 pgQuery／pgQueryOne（同一份假資料）。
+ * onRollback：fn 拋錯時呼叫，讓測試的假資料庫模擬 ROLLBACK。
+ */
+export function installTransactionPassthrough(
+  pg: PgModule & { withTransaction: unknown },
+  onRollback?: () => void,
+  onBegin?: () => void,
+): void {
+  (pg.withTransaction as Mock).mockImplementation(async (fn: (db: unknown) => Promise<unknown>) => {
+    onBegin?.();
+    try {
+      return await fn({
+        query: (sql: string, params?: unknown[]) => (pg.pgQuery as Mock)(sql, params),
+        queryOne: (sql: string, params?: unknown[]) => (pg.pgQueryOne as Mock)(sql, params),
+      });
+    } catch (err) {
+      onRollback?.();
+      throw err;
+    }
+  });
+}

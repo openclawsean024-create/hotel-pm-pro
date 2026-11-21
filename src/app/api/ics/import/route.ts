@@ -11,9 +11,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { pgQuery, pgQueryOne } from "@/lib/pg-client";
+import { pgQueryOne, withTransaction } from "@/lib/pg-client";
 import { parseIcsText, IcsParseError, type IcsEvent as ParsedIcsEvent } from "@/lib/ics-parser";
-import { findOverlappingBookings, type ExistingBooking } from "@/lib/booking-rules";
+import { findOverlappingBookings, PROPERTY_BOOKING_LOCK_SQL, type ExistingBooking } from "@/lib/booking-rules";
 import { icsBookingId } from "@/lib/ics-booking";
 import {
   FetchTimeoutError,
@@ -116,83 +116,90 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `ICS 事件數超過上限（${MAX_EVENTS} 筆）` }, { status: 400 });
   }
 
-  // 這個物業目前未取消的訂房（重疊檢查用），以及這批 UID 已經建立過的訂房（去重用）。
-  const occupied = await pgQuery<ExistingBooking>(
-    `SELECT id, "checkIn", "checkOut", status
-       FROM "Booking"
-      WHERE "userId" = $1 AND "propertyId" = $2 AND status <> 'cancelled'`,
-    [userId, propertyId]
-  );
-  const bookingIds = events.map((ev) => icsBookingId(userId, ev.uid));
-  const alreadyBooked = new Set(
-    events.length === 0
-      ? []
-      : (
-          await pgQuery<{ id: string }>(
-            `SELECT id FROM "Booking" WHERE "userId" = $1 AND id = ANY($2::text[])`,
-            [userId, bookingIds]
-          )
-        ).map((r) => r.id)
-  );
-
-  let imported = 0;
-  let skipped = 0;
-  let bookingsCreated = 0;
-  let bookingsExisting = 0;
-  let overlapped = 0;
-  const results: Array<{
-    uid: string;
-    summary: string;
-    checkIn: string;
-    checkOut: string;
-    booking: BookingOutcome;
-  }> = [];
-
-  for (let i = 0; i < events.length; i++) {
-    const ev = events[i];
-    const checkIn = ev.checkIn.toISOString();
-    const checkOut = ev.checkOut.toISOString();
-
-    // 1) 原始事件紀錄：ON CONFLICT (userId, uid) DO NOTHING 處理重複
-    const inserted = await pgQueryOne<{ id: string }>(
-      `INSERT INTO "IcsEvent" (id, "userId", "propertyId", uid, summary, "checkIn", "checkOut", source, "importedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-       ON CONFLICT ("userId", uid) DO NOTHING
-       RETURNING id`,
-      [generateId(), userId, propertyId, ev.uid, ev.summary, checkIn, checkOut, source]
+  // 檢查重疊與寫入訂房在同一個交易，並持有這個物業的鎖（與手動新增訂房共用），避免同時寫入造成重複訂房。
+  const summary = await withTransaction(async (db) => {
+    await db.query(PROPERTY_BOOKING_LOCK_SQL, [propertyId]);
+    // 這個物業目前未取消的訂房（重疊檢查用），以及這批 UID 已經建立過的訂房（去重用）。
+    const occupied = await db.query<ExistingBooking>(
+      `SELECT id, "checkIn", "checkOut", status
+         FROM "Booking"
+        WHERE "userId" = $1 AND "propertyId" = $2 AND status <> 'cancelled'`,
+      [userId, propertyId]
     );
-    if (inserted) imported++;
-    else skipped++;
+    const bookingIds = events.map((ev) => icsBookingId(userId, ev.uid));
+    const alreadyBooked = new Set(
+      events.length === 0
+        ? []
+        : (
+            await db.query<{ id: string }>(
+              `SELECT id FROM "Booking" WHERE "userId" = $1 AND id = ANY($2::text[])`,
+              [userId, bookingIds]
+            )
+          ).map((r) => r.id)
+    );
 
-    // 2) 轉成訂房
-    const bookingId = bookingIds[i];
-    let outcome: BookingOutcome;
-    if (alreadyBooked.has(bookingId)) {
-      outcome = "existing";
-    } else if (findOverlappingBookings({ checkIn, checkOut }, occupied).length > 0) {
-      outcome = "overlapped";
-    } else {
-      const created = await pgQueryOne<{ id: string }>(
-        `INSERT INTO "Booking" (id, "guestName", "propertyId", "userId", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 'confirmed', NOW(), NOW())
-         ON CONFLICT (id) DO NOTHING
+    let imported = 0;
+    let skipped = 0;
+    let bookingsCreated = 0;
+    let bookingsExisting = 0;
+    let overlapped = 0;
+    const results: Array<{
+      uid: string;
+      summary: string;
+      checkIn: string;
+      checkOut: string;
+      booking: BookingOutcome;
+    }> = [];
+
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+      const checkIn = ev.checkIn.toISOString();
+      const checkOut = ev.checkOut.toISOString();
+
+      // 1) 原始事件紀錄：ON CONFLICT (userId, uid) DO NOTHING 處理重複
+      const inserted = await db.queryOne<{ id: string }>(
+        `INSERT INTO "IcsEvent" (id, "userId", "propertyId", uid, summary, "checkIn", "checkOut", source, "importedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+         ON CONFLICT ("userId", uid) DO NOTHING
          RETURNING id`,
-        [bookingId, ev.summary.slice(0, 100), propertyId, userId, checkIn, checkOut, source]
+        [generateId(), userId, propertyId, ev.uid, ev.summary, checkIn, checkOut, source]
       );
-      if (created) {
-        outcome = "created";
-        occupied.push({ id: bookingId, checkIn, checkOut, status: "confirmed" });
-      } else {
-        outcome = "existing";
-      }
-      alreadyBooked.add(bookingId);
-    }
-    if (outcome === "created") bookingsCreated++;
-    else if (outcome === "existing") bookingsExisting++;
-    else overlapped++;
+      if (inserted) imported++;
+      else skipped++;
 
-    results.push({ uid: ev.uid, summary: ev.summary, checkIn, checkOut, booking: outcome });
-  }
+      // 2) 轉成訂房
+      const bookingId = bookingIds[i];
+      let outcome: BookingOutcome;
+      if (alreadyBooked.has(bookingId)) {
+        outcome = "existing";
+      } else if (findOverlappingBookings({ checkIn, checkOut }, occupied).length > 0) {
+        outcome = "overlapped";
+      } else {
+        const created = await db.queryOne<{ id: string }>(
+          `INSERT INTO "Booking" (id, "guestName", "propertyId", "userId", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 'confirmed', NOW(), NOW())
+           ON CONFLICT (id) DO NOTHING
+           RETURNING id`,
+          [bookingId, ev.summary.slice(0, 100), propertyId, userId, checkIn, checkOut, source]
+        );
+        if (created) {
+          outcome = "created";
+          occupied.push({ id: bookingId, checkIn, checkOut, status: "confirmed" });
+        } else {
+          outcome = "existing";
+        }
+        alreadyBooked.add(bookingId);
+      }
+      if (outcome === "created") bookingsCreated++;
+      else if (outcome === "existing") bookingsExisting++;
+      else overlapped++;
+
+      results.push({ uid: ev.uid, summary: ev.summary, checkIn, checkOut, booking: outcome });
+    }
+
+    return { imported, skipped, bookingsCreated, bookingsExisting, overlapped, results };
+  });
+  const { imported, skipped, bookingsCreated, bookingsExisting, overlapped, results } = summary;
 
   return NextResponse.json({
     imported,

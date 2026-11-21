@@ -1,6 +1,6 @@
 # Status — 民宿與包租代管 PMS（hotel-pm-pro）
 
-- 更新日期：2026-11-16
+- 更新日期：2026-11-22
 - 狀態：🟡 **M1 程式完成，待 Sean 覆審與 AC-006 (c) 手動驗證**（分支 `feat/m1`）
 - 目前里程碑：M1（見 `GOAL.md`）
 - 規格：`PRD/SPEC.md` v4.0
@@ -62,15 +62,52 @@ stripe trigger checkout.session.completed
 
 | 事件 | 行為 |
 |---|---|
-| `checkout.session.completed` | 訂閱模式且已付款、`metadata` 有 `userId` 與 `plan`（pro／business）時，**建立或更新** `Subscription`（`ON CONFLICT ("userId")`）並更新 `User.tier`、補上 `stripeCustomerId`；其他情況回 200 不寫入 |
+| `checkout.session.completed` | 訂閱模式且已付款、`metadata` 有 `userId` 與 `plan` 時，**向 Stripe 取得訂閱最新狀態**：方案以訂閱的 price 決定（與 metadata 不符就不寫入），狀態照實記錄（事件晚到、訂閱已取消時不給付費方案）；再**建立或更新** `Subscription` 並更新 `User.tier`、補上 `stripeCustomerId`；其他情況回 200 不寫入 |
 | `customer.subscription.updated` | 同步狀態、期末取消、期末時間；有效狀態依 price id 對應方案（未知 price 維持原方案）；`canceled`／`unpaid`／`incomplete_expired` 降回 free；`past_due` 保留方案 |
 | `customer.subscription.deleted` | `Subscription` 與 `User.tier` 降回 free |
 | `invoice.payment_failed` | active → past_due |
 | `invoice.paid` | past_due／incomplete → active（不會讓已取消的訂閱復活） |
-| 冪等 | 以 `event.id` 寫入 `StripeEvent`（`ON CONFLICT DO NOTHING`）；重送回 `duplicate: true` 不再處理；處理失敗回 500 並釋放佔位讓 Stripe 重送 |
+| 冪等 | 在**同一個資料庫交易**裡以 `event.id` 寫入 `StripeEvent`（`ON CONFLICT DO NOTHING`）並處理事件；重送回 `duplicate: true`；處理失敗或程序中途被終止時整個交易回滾（佔位一起消失），回 500 讓 Stripe 重送 |
 | 金鑰防呆 | 非 production（以 `VERCEL_ENV` 為準，沒有時看 `NODE_ENV`）拿到 `sk_live_`／`rk_live_` 時 checkout 與 webhook 回 503；`livemode` 事件在非 production 回 400 |
 
+## 交叉審查（2026-11-22，Claude Code 子代理）
+
+依 Sean 指示改用 Claude Code 子代理（不是 Codex）做獨立審查：一個看安全（金流、SSRF、授權、標頭、金鑰），一個看正確性（帳務、日期、訂房、測試品質）。兩者都沒有 critical／high 等級的問題。
+
+**已修正**（每項都有新測試，且已確認新測試在修正前會失敗）：
+
+| 問題 | 修正 | 測試 |
+|---|---|---|
+| webhook 佔位與處理分開：程序中途被終止時事件永久遺失 | 佔位與處理放進同一個交易（`withTransaction`） | `stripe/webhook/route.test.ts`「同一個交易…一起回滾」 |
+| 事件順序顛倒時，晚到的結帳完成事件把已取消的訂閱寫回付費方案；方案只信 metadata | 結帳完成時向 Stripe 取得訂閱，以實際狀態與 price 決定方案 | 同檔「事件順序顛倒與方案來源」5 個測試 |
+| 同一物業兩筆訂房同時送出（或與 ICS 匯入同時）可能都通過重疊檢查 | 以物業為鍵的 advisory lock，檢查與寫入同一個交易 | `bookings/route.test.ts`、`ics/import/route.test.ts` 的鎖與順序測試 |
+| CSV 匯出沒有試算表公式注入防護 | `= + - @` 等開頭的文字前加 `'`（數字不變） | `csv.test.ts` |
+| 總覽 `?month=2026-13` 回 500 | 改用 `isValidMonth` 驗證，回 400 | `dashboard/summary/route.test.ts` |
+| 總覽今日入住／退房、本月營收、6 個月趨勢以 UTC 日界線計算，與月報不一致 | 改用台北時間日界線 | 同上 |
+| ICS 時間欄位不是數字時產生 Invalid Date、匯入中途 500 | 改為 `IcsParseError`（回 400，不寫入） | `ics-parser.test.ts` |
+| 訂房 API 接受不帶時區的時間（依伺服器時區解讀） | 只接受 `YYYY-MM-DD` 或帶時區的 ISO 時間 | `bookings/route.test.ts` |
+| 需求單標題／描述可以只有空白 | `.trim()` 後檢查 | `requirements/[id]/route.test.ts` |
+
+**需要 Sean 決定**：
+
+- 固定金額拆帳在淨收入為負時，目前房東承擔全部虧損（例：淨收入 -500、固定 1,000 → 房東 -500、業者 0）。是否要改成房東最少 0？屬 AC-002 拆帳規則覆審。
+- 總覽「本月營收」計入 confirmed 訂房（已訂），月報只計 completed（已完成）。數字可能不同，是否要改標示為「本月已訂營收」或與月報一致？
+
+**記錄、M2 處理**（不影響 M1 驗收）：
+
+- SSRF：DNS 檢查與實際連線之間的 DNS rebinding 時間差（只允許 https/443，實際風險低）；IPv4-translated IPv6（`::ffff:0:a.b.c.d`）未列入封鎖；「無法解析」與「解析到內部位址」錯誤訊息不同。
+- CSP 的 `script-src` 仍有 `'unsafe-inline'`，建議改用 nonce。
+- ICS：UID 與 summary 沒有長度上限；平台改期或取消時以 UID 去重會保留舊訂房；同一個行事曆匯入第二個物業會全部顯示「已存在」；沒有 DTEND 的全天事件被略過；沒有時區的時間視為 UTC。
+- `calculateOverdueDays`（搬自 hotel-pm，目前沒有程式使用）以 24 小時計，與合約提醒的台北日曆日不同；保留原測試未改。
+- `NEXT_PUBLIC_APP_URL` 未設定時 checkout 的導回網址退回 localhost；`StripeConfigError` 訊息會回給呼叫端。
+- 預載失敗時方案顯示為 free（頁面已有錯誤提示）。
+- 測試品質：`preload.test.ts` 以原始碼文字比對確認 Room 表修正；訂房重疊的 SQL 條件與同時寫入沒有真實資料庫的測試。
+
 ## M1 驗證紀錄（SOP §4 全套）
+
+2026-11-22 審查修正後重跑（本機 Node v26.13.1）：typecheck、lint、`npm test`（20 files、**359 tests** passed）、`CI=1 npm run test:e2e`（38 passed）、build、`git diff --check` 皆 exit 0；金鑰 `git grep` 無輸出。
+
+以下為 2026-11-16 的首次紀錄。
 
 2026-11-16，本機 Node v26.13.1（CI 為 Node 20），在乾淨的 `npm ci` 後依序執行；build 使用 SOP §3 的假環境變數。
 

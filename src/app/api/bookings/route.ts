@@ -2,15 +2,23 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { pgQuery, pgQueryOne } from "@/lib/pg-client";
+import { pgQuery, pgQueryOne, withTransaction } from "@/lib/pg-client";
 import { parseDateStrict, toTaipeiDateISO } from "@/lib/dates";
-import { findOverlappingBookings, validateBookingDates, type ExistingBooking } from "@/lib/booking-rules";
+import {
+  findOverlappingBookings,
+  PROPERTY_BOOKING_LOCK_SQL,
+  validateBookingDates,
+  type ExistingBooking,
+} from "@/lib/booking-rules";
+
+const BOOKING_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2}))?$/;
 
 const createSchema = z.object({
   propertyId: z.string().min(1),
   guestName: z.string().min(1).max(100),
-  checkIn: z.string().min(1), // ISO date
-  checkOut: z.string().min(1),
+  // 只接受 YYYY-MM-DD 或帶時區（Z 或 ±hh:mm）的時間；不帶時區的時間會依伺服器時區解讀，結果不穩定。
+  checkIn: z.string().regex(BOOKING_DATE_RE, "入住日期格式錯誤"),
+  checkOut: z.string().regex(BOOKING_DATE_RE, "退房日期格式錯誤"),
   channel: z.enum(["airbnb", "booking", "manual"]).default("manual"),
   totalPrice: z.number().int().min(0),
   status: z.enum(["confirmed", "cancelled", "completed"]).default("confirmed"),
@@ -74,42 +82,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "找不到物業" }, { status: 404 });
   }
 
-  // 重疊檢查（AC-005，FR-010）：同一物業、未取消的訂房不可重疊；相鄰（退房日 = 下一筆入住日）不算。
-  // 建立的訂房本身若是 cancelled，不佔用日期，不需檢查。
-  if (status !== "cancelled") {
-    const candidates = await pgQuery<ExistingBooking & { guestName: string }>(
-      `SELECT id, "guestName", "checkIn", "checkOut", status
-         FROM "Booking"
-        WHERE "userId" = $1
-          AND "propertyId" = $2
-          AND status <> 'cancelled'
-          AND "checkIn" < $3
-          AND "checkOut" > $4`,
-      [session.user.id, propertyId, checkOut, checkIn]
-    );
-    const conflicts = findOverlappingBookings({ checkIn, checkOut }, candidates);
-    if (conflicts.length > 0) {
-      return NextResponse.json(
-        {
-          error: "此物業在這段日期已有訂房，無法重複訂房",
-          conflicts: conflicts.map((c) => ({
-            id: c.id,
-            checkIn: toTaipeiDateISO(c.checkIn, "checkIn"),
-            checkOut: toTaipeiDateISO(c.checkOut, "checkOut"),
-          })),
-        },
-        { status: 409 }
-      );
-    }
-  }
-
   const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 
-  await pgQuery(
-    `INSERT INTO "Booking" (id, "guestName", "propertyId", "userId", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
-    [id, guestName, propertyId, session.user.id, checkIn, checkOut, channel, totalPrice, status]
-  );
+  // 重疊檢查（AC-005，FR-010）：同一物業、未取消的訂房不可重疊；相鄰（退房日 = 下一筆入住日）不算。
+  // 檢查與寫入在同一個交易，並先取得這個物業的鎖：兩筆同時送出的訂房不會都通過檢查。
+  // 建立的訂房本身若是 cancelled，不佔用日期，不需檢查。
+  const conflicts = await withTransaction(async (db) => {
+    if (status !== "cancelled") {
+      await db.query(PROPERTY_BOOKING_LOCK_SQL, [propertyId]);
+      const candidates = await db.query<ExistingBooking & { guestName: string }>(
+        `SELECT id, "guestName", "checkIn", "checkOut", status
+           FROM "Booking"
+          WHERE "userId" = $1
+            AND "propertyId" = $2
+            AND status <> 'cancelled'
+            AND "checkIn" < $3
+            AND "checkOut" > $4`,
+        [session.user.id, propertyId, checkOut, checkIn]
+      );
+      const found = findOverlappingBookings({ checkIn, checkOut }, candidates);
+      if (found.length > 0) return found;
+    }
+    await db.query(
+      `INSERT INTO "Booking" (id, "guestName", "propertyId", "userId", "checkIn", "checkOut", channel, "totalPrice", status, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+      [id, guestName, propertyId, session.user.id, checkIn, checkOut, channel, totalPrice, status]
+    );
+    return [];
+  });
+
+  if (conflicts.length > 0) {
+    return NextResponse.json(
+      {
+        error: "此物業在這段日期已有訂房，無法重複訂房",
+        conflicts: conflicts.map((c) => ({
+          id: c.id,
+          checkIn: toTaipeiDateISO(c.checkIn, "checkIn"),
+          checkOut: toTaipeiDateISO(c.checkOut, "checkOut"),
+        })),
+      },
+      { status: 409 }
+    );
+  }
 
   const created = await pgQueryOne(`SELECT * FROM "Booking" WHERE id = $1 AND "userId" = $2`, [id, session.user.id]);
   return NextResponse.json(created, { status: 201 });

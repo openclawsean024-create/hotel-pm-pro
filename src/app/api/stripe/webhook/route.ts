@@ -4,8 +4,8 @@
 // 同一個事件（event.id）重送時不會重複處理，直接回 200。
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { pgQuery, pgQueryOne } from "@/lib/pg-client";
-import { getStripe, isProductionEnv, StripeConfigError } from "@/lib/stripe";
+import { withTransaction } from "@/lib/pg-client";
+import { fetchSubscription, getStripe, isProductionEnv, StripeConfigError } from "@/lib/stripe";
 import { handleStripeEvent } from "@/lib/stripe-webhook";
 
 export async function POST(req: Request) {
@@ -43,38 +43,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "非 production 環境不處理正式模式事件" }, { status: 400 });
   }
 
-  // 冪等：先以 event.id 佔位；已存在代表這個事件處理過（或正在處理），直接回 200。
-  let claimed: { id: string } | null;
+  // 冪等：在同一個交易裡先以 event.id 佔位、再處理事件。
+  //   - 已存在 → 這個事件處理過，直接回 200 duplicate。
+  //   - 處理失敗或程序中途被終止 → 交易回滾，佔位一起消失，Stripe 重送時可以重新處理。
+  //   - 兩次遞送同時到達 → 後到的 INSERT 會等前一個交易結束，再得到 duplicate 或接手處理。
   try {
-    claimed = await pgQueryOne<{ id: string }>(
-      `INSERT INTO "StripeEvent" (id, type, "processedAt")
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (id) DO NOTHING
-       RETURNING id`,
-      [event.id, event.type]
-    );
+    const outcome = await withTransaction(async (db) => {
+      const claimed = await db.queryOne<{ id: string }>(
+        `INSERT INTO "StripeEvent" (id, type, "processedAt")
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (id) DO NOTHING
+         RETURNING id`,
+        [event.id, event.type]
+      );
+      if (!claimed) return { duplicate: true as const };
+      const result = await handleStripeEvent(event, {
+        db,
+        retrieveSubscription: (id) => fetchSubscription(stripe, id),
+      });
+      return { duplicate: false as const, handled: result.handled };
+    });
+    if (outcome.duplicate) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    return NextResponse.json({ received: true, handled: outcome.handled });
   } catch (err) {
-    console.error("[stripe webhook] 無法記錄事件：", err instanceof Error ? err.message : "unknown");
-    return NextResponse.json({ error: "DB error" }, { status: 500 });
-  }
-  if (!claimed) {
-    return NextResponse.json({ received: true, duplicate: true });
-  }
-
-  try {
-    const result = await handleStripeEvent(event);
-    return NextResponse.json({ received: true, handled: result.handled });
-  } catch (err) {
-    // 處理失敗：釋放佔位，讓 Stripe 重送時可以重新處理；回 500 觸發重送。
+    // 回 500 讓 Stripe 重送；不記錄 payload。
     console.error(
       `[stripe webhook] 處理 ${event.type} 失敗：`,
       err instanceof Error ? err.message : "unknown"
     );
-    try {
-      await pgQuery(`DELETE FROM "StripeEvent" WHERE id = $1`, [event.id]);
-    } catch {
-      console.error("[stripe webhook] 無法釋放事件佔位");
-    }
-    return NextResponse.json({ error: "DB error" }, { status: 500 });
+    return NextResponse.json({ error: "處理失敗" }, { status: 500 });
   }
 }

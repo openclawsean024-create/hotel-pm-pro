@@ -8,7 +8,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { pgQuery } from "@/lib/pg-client";
-import { nextMonth, shiftDateISO, taipeiTodayISO, toTaipeiDateISO } from "@/lib/dates";
+import {
+  isValidMonth,
+  nextMonth,
+  shiftDateISO,
+  taipeiDayStartUtcISO,
+  taipeiMonthRangeUtc,
+  taipeiTodayISO,
+  toTaipeiDateISO,
+} from "@/lib/dates";
 import { deriveRoomState } from "@/lib/room-state";
 import { getOccupancyRate } from "@/lib/occupancy";
 import { getContractAlerts, CONTRACT_ALERT_WINDOW_DAYS } from "@/lib/contracts";
@@ -20,6 +28,7 @@ const querySchema = z.object({
   month: z
     .string()
     .regex(/^\d{4}-\d{2}$/, "month 必須為 YYYY-MM")
+    .refine(isValidMonth, "month 必須為有效的月份（01–12）")
     .optional(),
 });
 
@@ -78,6 +87,12 @@ export async function GET(req: Request) {
   const monthParam = parsed.data.month ?? todayStr.slice(0, 7);
   const monthStart = `${monthParam}-01`;
   const monthEnd = `${nextMonth(monthParam)}-01`;
+  // SQL 參數一律用 Asia/Taipei 的日界線換成 UTC（資料庫存的是 UTC），與月報、房況的算法一致。
+  const monthRange = taipeiMonthRangeUtc(monthParam);
+  const monthStartUtc = monthRange.start.toISOString();
+  const monthEndUtc = monthRange.end.toISOString();
+  const todayStartUtc = taipeiDayStartUtcISO(todayStr);
+  const tomorrowStartUtc = taipeiDayStartUtcISO(shiftDateISO(todayStr, 1));
   const tomorrowStr = shiftDateISO(todayStr, 1);
   const trendMonths = lastNMonths(monthParam, 6);
 
@@ -128,7 +143,7 @@ export async function GET(req: Request) {
         AND "propertyId" = ANY($2::text[])
         AND status <> 'cancelled'
         AND "checkIn" >= $3 AND "checkIn" < $4`,
-    [userId, propertyIdParam, todayStr, shiftDateISO(todayStr, 1)]
+    [userId, propertyIdParam, todayStartUtc, tomorrowStartUtc]
   );
   const checkOutsTodayRes = await pgQuery<{ count: string }>(
     `SELECT COUNT(*)::text AS count
@@ -137,7 +152,7 @@ export async function GET(req: Request) {
         AND "propertyId" = ANY($2::text[])
         AND status <> 'cancelled'
         AND "checkOut" >= $3 AND "checkOut" < $4`,
-    [userId, propertyIdParam, todayStr, shiftDateISO(todayStr, 1)]
+    [userId, propertyIdParam, todayStartUtc, tomorrowStartUtc]
   );
 
   // ----- KPI: revenueMonth (sum totalPrice in month, all statuses except cancelled) -----
@@ -148,7 +163,7 @@ export async function GET(req: Request) {
         AND "propertyId" = ANY($2::text[])
         AND status <> 'cancelled'
         AND "checkIn" >= $3 AND "checkIn" < $4`,
-    [userId, propertyIdParam, monthStart, monthEnd]
+    [userId, propertyIdParam, monthStartUtc, monthEndUtc]
   );
 
   // ----- KPI: openCases (Requirement open/in_progress + Maintenance pending/in_progress) -----
@@ -411,14 +426,14 @@ export async function GET(req: Request) {
     .map(({ _rank, _createdAt, ...w }) => w);
 
   // ----- Revenue series (C5): last 6 months, current month highlighted by ordering -----
-  const trendStart = `${trendMonths[0]}-01`;
-  const trendEnd = `${nextMonth(trendMonths[trendMonths.length - 1])}-01`;
+  const trendStart = taipeiMonthRangeUtc(trendMonths[0]).start.toISOString();
+  const trendEnd = taipeiMonthRangeUtc(trendMonths[trendMonths.length - 1]).end.toISOString();
   const trendBookings = await pgQuery<{
     total: string;
     monthPrefix: string;
   }>(
     `SELECT COALESCE(SUM("totalPrice"), 0)::text AS total,
-            to_char("checkIn" AT TIME ZONE 'UTC', 'YYYY-MM') AS "monthPrefix"
+            to_char(("checkIn" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Taipei', 'YYYY-MM') AS "monthPrefix"
        FROM "Booking"
       WHERE "userId" = $1
         AND "propertyId" = ANY($2::text[])
@@ -452,7 +467,7 @@ export async function GET(req: Request) {
         AND status <> 'cancelled'
         AND "checkIn" >= $3 AND "checkIn" < $4
       GROUP BY "propertyId"`,
-    [userId, propertyIdParam, monthStart, monthEnd]
+    [userId, propertyIdParam, monthStartUtc, monthEndUtc]
   );
   const mtdMap = new Map(mtdByPropRes.map((r) => [r.propertyId, Number(r.total)]));
 

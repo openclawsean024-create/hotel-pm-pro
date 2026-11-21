@@ -34,3 +34,25 @@ describe("AC-003 CSV 其他邊界", () => {
   it("AC-003 同時含逗號、雙引號、換行", () =>
     expect(createCsv([{ note: '他說 "好",\n明天見' }])).toBe('note\n"他說 ""好"",\n明天見"'));
 });
+
+describe("AC-003 CSV 試算表公式注入防護", () => {
+  it("AC-003 以 = + - @ 開頭的文字前面加上 '，Excel 不會當成公式執行", () => {
+    const csv = createCsv([
+      { name: '=HYPERLINK("http://x.example.test","y")' },
+      { name: "+cmd|' /C calc'!A0" },
+      { name: "-測試" },
+      { name: "@SUM(A1)" },
+      { name: "\t=1+1" },
+    ]);
+    const lines = csv.split("\n");
+    expect(lines[1]).toBe(`"'=HYPERLINK(""http://x.example.test"",""y"")"`);
+    expect(lines[2]).toBe("'+cmd|' /C calc'!A0");
+    expect(lines[3]).toBe("'-測試");
+    expect(lines[4]).toBe("'@SUM(A1)");
+    expect(lines[5]).toBe("'\t=1+1");
+  });
+
+  it("AC-003 負數與一般數字維持原樣（仍是數字）", () => {
+    expect(createCsv([{ amount: -500 }, { amount: "-1234.5" }, { amount: 36000 }])).toBe("amount\n-500\n-1234.5\n36000");
+  });
+});

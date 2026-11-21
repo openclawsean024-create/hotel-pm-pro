@@ -3,11 +3,11 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { jsonRequest, mockSession, TEST_USER } from "@/test-utils/mock-db";
+import { installTransactionPassthrough, jsonRequest, mockSession, TEST_USER } from "@/test-utils/mock-db";
 
 vi.mock("node:dns/promises", () => ({ lookup: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/pg-client", () => ({ pgQuery: vi.fn(), pgQueryOne: vi.fn() }));
+vi.mock("@/lib/pg-client", () => ({ pgQuery: vi.fn(), pgQueryOne: vi.fn(), withTransaction: vi.fn() }));
 
 import { lookup } from "node:dns/promises";
 import { auth } from "@/lib/auth";
@@ -47,6 +47,7 @@ function installFakeDb() {
   const run = async (sql: string, params: unknown[] = []): Promise<unknown[]> => {
     const s = sql.replace(/\s+/g, " ").trim();
     sqlLog.push({ sql: s, params });
+    if (s.startsWith("SELECT pg_advisory_xact_lock")) return [{}];
     if (s.startsWith('SELECT id FROM "Property"')) {
       return properties.filter((p) => p.id === params[0] && p.userId === params[1]).map((p) => ({ id: p.id }));
     }
@@ -79,6 +80,7 @@ function installFakeDb() {
   };
   (pg.pgQuery as Mock).mockImplementation(run);
   (pg.pgQueryOne as Mock).mockImplementation(async (sql: string, params?: unknown[]) => (await run(sql, params))[0] ?? null);
+  installTransactionPassthrough(pg);
 }
 
 const icsResponse = (body: string) =>
@@ -102,6 +104,21 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.useRealTimers();
+});
+
+describe("AC-007 ICS 匯入與手動訂房共用物業鎖", () => {
+  it("AC-007 先取得物業的鎖，再讀取既有訂房與寫入（同一個交易）", async () => {
+    const { res } = await importFixture("airbnb-fake.ics");
+    expect(res.status).toBe(200);
+    expect(pg.withTransaction).toHaveBeenCalledTimes(1);
+    const lock = sqlLog.findIndex((q) => q.sql.startsWith("SELECT pg_advisory_xact_lock"));
+    const read = sqlLog.findIndex((q) => q.sql.startsWith('SELECT id, "checkIn", "checkOut", status FROM "Booking"'));
+    const write = sqlLog.findIndex((q) => q.sql.startsWith('INSERT INTO "Booking"'));
+    expect(lock).toBeGreaterThanOrEqual(0);
+    expect(lock).toBeLessThan(read);
+    expect(read).toBeLessThan(write);
+    expect(sqlLog[lock].params).toEqual(["p1"]);
+  });
 });
 
 describe("AC-007 ICS 匯入轉成訂房", () => {

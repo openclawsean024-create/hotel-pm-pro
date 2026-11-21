@@ -53,3 +53,9 @@ export function findOverlappingBookings<T extends ExistingBooking>(
     (b) => b.status !== "cancelled" && isBookingOverlapping(candidate, b),
   );
 }
+
+/**
+ * 同一物業的訂房寫入要排隊：在交易內取得以 propertyId 為鍵的 advisory lock，
+ * 交易結束（COMMIT／ROLLBACK）時自動釋放。這樣「檢查重疊 → 寫入」之間不會被另一筆同時進來的訂房插隊。
+ */
+export const PROPERTY_BOOKING_LOCK_SQL = `SELECT pg_advisory_xact_lock(hashtext('booking:' || $1))`;

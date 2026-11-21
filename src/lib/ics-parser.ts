@@ -146,6 +146,9 @@ function parseIcsDate(value: string, params: Map<string, string>): Date {
     throw new IcsParseError(`無效的 ICS 日期: ${value}`);
   }
 
+  if (!/^\d{8}/.test(cleaned)) {
+    throw new IcsParseError(`無效的 ICS 日期: ${value}`);
+  }
   const year = parseInt(cleaned.slice(0, 4), 10);
   const month = parseInt(cleaned.slice(4, 6), 10);
   const day = parseInt(cleaned.slice(6, 8), 10);
@@ -169,6 +172,9 @@ function parseIcsDate(value: string, params: Map<string, string>): Date {
   // DATE-TIME
   const timePart = cleaned.slice(9); // "HHMMSS" or "HHMMSSZ"
   if (timePart.length < 6) {
+    throw new IcsParseError(`無效的 ICS 日期時間: ${value}`);
+  }
+  if (!/^\d{6}Z?$/.test(timePart)) {
     throw new IcsParseError(`無效的 ICS 日期時間: ${value}`);
   }
   const hour = parseInt(timePart.slice(0, 2), 10);

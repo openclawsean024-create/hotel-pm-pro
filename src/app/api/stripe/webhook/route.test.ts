@@ -4,9 +4,16 @@
 import Stripe from "stripe";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-vi.mock("@/lib/pg-client", () => ({ pgQuery: vi.fn(), pgQueryOne: vi.fn() }));
+vi.mock("@/lib/pg-client", () => ({ pgQuery: vi.fn(), pgQueryOne: vi.fn(), withTransaction: vi.fn() }));
+// 向 Stripe 取得訂閱最新狀態的呼叫以假資料取代（不連 Stripe）。
+vi.mock("@/lib/stripe", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/stripe")>()),
+  fetchSubscription: vi.fn(),
+}));
 
 import * as pg from "@/lib/pg-client";
+import { fetchSubscription } from "@/lib/stripe";
+import { installTransactionPassthrough } from "@/test-utils/mock-db";
 import { POST } from "./route";
 
 const WEBHOOK_SECRET = "whsec_dummy_placeholder";
@@ -34,6 +41,9 @@ let subs: Map<string, SubRow>; // key = userId
 let events: Set<string>;
 let writes: string[];
 let failNextWrite: string | null;
+/** Stripe 端訂閱的實際狀態（fetchSubscription 回傳這份）。 */
+let remote: { status: string; plan: string; cancelAtPeriodEnd: boolean };
+let transactions: number;
 
 function installFakeDb() {
   users = new Map([["user-test-1", { id: "user-test-1", tier: "free", stripeCustomerId: null }]]);
@@ -41,6 +51,8 @@ function installFakeDb() {
   events = new Set();
   writes = [];
   failNextWrite = null;
+  remote = { status: "active", plan: "pro", cancelAtPeriodEnd: false };
+  transactions = 0;
 
   const run = async (sql: string, params: unknown[] = []): Promise<unknown[]> => {
     const s = sql.replace(/\s+/g, " ").trim();
@@ -69,16 +81,18 @@ function installFakeDb() {
     }
     if (s.startsWith('INSERT INTO "Subscription"')) {
       expect(s).toMatch(/ON CONFLICT \("userId"\) DO UPDATE/);
-      const [, userId, stripeSubscriptionId, stripePriceId, plan] = params as string[];
+      const [, userId, stripeSubscriptionId, stripePriceId, plan, status, cancelAtPeriodEnd, periodEnd] = params as [
+        string, string, string, string, string, string, boolean, number | null,
+      ];
       const prev = subs.get(userId);
       subs.set(userId, {
         userId,
         stripeSubscriptionId,
         stripePriceId,
         plan,
-        status: "active",
-        cancelAtPeriodEnd: false,
-        periodEnd: prev?.periodEnd ?? null,
+        status,
+        cancelAtPeriodEnd,
+        periodEnd: periodEnd ?? prev?.periodEnd ?? null,
       });
       return [];
     }
@@ -155,6 +169,31 @@ function installFakeDb() {
 
   (pg.pgQuery as Mock).mockImplementation(run);
   (pg.pgQueryOne as Mock).mockImplementation(async (sql: string, params?: unknown[]) => (await run(sql, params))[0] ?? null);
+
+  // 交易：開始時記下快照，失敗時還原（模擬 Postgres ROLLBACK）。
+  let snapshot: { users: Map<string, UserRow>; subs: Map<string, SubRow>; events: Set<string>; writes: string[] } | null = null;
+  const clone = <T,>(m: Map<string, T>) => new Map([...m].map(([k, v]) => [k, { ...v }]));
+  installTransactionPassthrough(
+    pg,
+    () => {
+      users = snapshot!.users;
+      subs = snapshot!.subs;
+      events = snapshot!.events;
+      writes.splice(0, writes.length, ...snapshot!.writes);
+    },
+    () => {
+      transactions += 1;
+      snapshot = { users: clone(users), subs: clone(subs), events: new Set(events), writes: [...writes] };
+    },
+  );
+
+  (fetchSubscription as Mock).mockImplementation(async (_stripe: unknown, id: string) => ({
+    id,
+    object: "subscription",
+    status: remote.status,
+    cancel_at_period_end: remote.cancelAtPeriodEnd,
+    items: { data: [{ current_period_end: 1797480000, price: { id: `price_dummy_${remote.plan}` } }] },
+  }));
 }
 
 // ---------- 測試事件 ----------
@@ -179,7 +218,13 @@ function signedRequest(event: unknown, secret = WEBHOOK_SECRET): Request {
   return new Request(URL_, { method: "POST", body: payload, headers: { "stripe-signature": header } });
 }
 
-const checkoutCompleted = (over: Record<string, unknown> = {}) =>
+/** 結帳完成事件。Stripe 端的訂閱預設與結帳要求的方案一致（測試可再改 remote 模擬不一致）。 */
+const checkoutCompleted = (over: Record<string, unknown> = {}) => {
+  const plan = (over.metadata as { plan?: string } | undefined)?.plan;
+  if (plan === "pro" || plan === "business") remote.plan = plan;
+  return checkoutEvent(over);
+};
+const checkoutEvent = (over: Record<string, unknown> = {}) =>
   makeEvent("checkout.session.completed", {
     id: "cs_test_fake_0001",
     object: "checkout.session",
@@ -470,6 +515,24 @@ describe("AC-006 (a) 冪等：同一事件重送不重複處理", () => {
     expect(subs.size).toBe(1);
   });
 
+  it("AC-006 佔位與處理在同一個交易：處理到一半失敗，佔位與已寫入的資料一起回滾", async () => {
+    const event = checkoutCompleted();
+    failNextWrite = 'UPDATE "User" SET tier = $1, "stripeCustomerId"'; // Subscription 已寫入後才失敗
+    const first = await send(event);
+    expect(first.status).toBe(500);
+    expect(transactions).toBe(1);
+    expect(events.has(event.id)).toBe(false);
+    expect(subs.has("user-test-1")).toBe(false);
+    expect(users.get("user-test-1")!.tier).toBe("free");
+    // 不再依賴「失敗後另外 DELETE 佔位」（程序中途被終止時那段程式根本不會執行）
+    const deletes = (pg.pgQuery as Mock).mock.calls.filter(([sql]) => /DELETE FROM "StripeEvent"/.test(sql));
+    expect(deletes).toHaveLength(0);
+
+    const retry = await send(event);
+    expect(await retry.json()).toEqual({ received: true, handled: true });
+    expect(users.get("user-test-1")!.tier).toBe("pro");
+  });
+
   it("AC-006 處理失敗回 500 並釋放佔位，Stripe 重送時可以重新處理", async () => {
     const event = checkoutCompleted();
     failNextWrite = 'INSERT INTO "Subscription"';
@@ -491,6 +554,44 @@ describe("AC-006 (a) 冪等：同一事件重送不重複處理", () => {
     const second = await send(event);
     expect(await second.json()).toEqual({ received: true, duplicate: true });
     expect(writes).toEqual([]);
+  });
+});
+
+describe("AC-006 (a) 事件順序顛倒與方案來源", () => {
+  it("AC-006 結帳完成晚於取消送達：以 Stripe 上訂閱的實際狀態為準，不給付費方案", async () => {
+    remote.status = "canceled";
+    const res = await send(checkoutCompleted());
+    expect(await res.json()).toEqual({ received: true, handled: true });
+    expect(subs.get("user-test-1")).toMatchObject({ status: "canceled", plan: "free", stripeSubscriptionId: "sub_test_fake_0001" });
+    expect(users.get("user-test-1")!.tier).toBe("free");
+  });
+
+  it("AC-006 訂閱仍在 past_due（寬限期）時照實記錄狀態並保留方案", async () => {
+    remote.status = "past_due";
+    await send(checkoutCompleted());
+    expect(subs.get("user-test-1")).toMatchObject({ status: "past_due", plan: "pro" });
+    expect(users.get("user-test-1")!.tier).toBe("pro");
+  });
+
+  it("AC-006 方案取自訂閱的 price：metadata 寫 business 但實際買的是 pro，不升級", async () => {
+    remote.plan = "pro";
+    const res = await send(checkoutEvent({ metadata: { userId: "user-test-1", plan: "business" } }));
+    expect(await res.json()).toEqual({ received: true, handled: false });
+    expect(writes).toEqual([]);
+    expect(users.get("user-test-1")!.tier).toBe("free");
+  });
+
+  it("AC-006 訂閱的 price 不是本站方案時不寫入", async () => {
+    remote.plan = "unknown";
+    const res = await send(checkoutEvent());
+    expect(await res.json()).toEqual({ received: true, handled: false });
+    expect(writes).toEqual([]);
+  });
+
+  it("AC-006 向 Stripe 取得的是結帳事件所指的訂閱", async () => {
+    await send(checkoutCompleted());
+    expect(fetchSubscription).toHaveBeenCalledTimes(1);
+    expect((fetchSubscription as Mock).mock.calls[0][1]).toBe("sub_test_fake_0001");
   });
 });
 

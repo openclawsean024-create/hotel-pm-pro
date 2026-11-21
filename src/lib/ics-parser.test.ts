@@ -227,3 +227,27 @@ describe("AC-007 缺欄位與無效內容", () => {
     ]);
   });
 });
+
+describe("AC-007 時間欄位格式錯誤", () => {
+  const ics = (dtstart: string) =>
+    [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:fake-bad-time@fixture.hotel-pm.test",
+      `DTSTART:${dtstart}`,
+      "DTEND:20261220T110000Z",
+      "SUMMARY:Reserved",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+  it("AC-007 時間不是數字時拋 IcsParseError（不產生 Invalid Date）", () => {
+    expect(() => parseIcsText(ics("20261215TXXXXXX"))).toThrow(IcsParseError);
+    expect(() => parseIcsText(ics("20261215T15XX00Z"))).toThrow(IcsParseError);
+  });
+
+  it("AC-007 日期不是數字時拋 IcsParseError", () => {
+    expect(() => parseIcsText(ics("2026AB15"))).toThrow(IcsParseError);
+  });
+});

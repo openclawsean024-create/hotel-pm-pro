@@ -6,8 +6,8 @@ import { pgQuery, pgQueryOne } from "@/lib/pg-client";
 
 // 可編輯的欄位。userId／propertyId 等其他欄位不開放修改（未列出的 key 會被 Zod 丟棄）。
 const updateSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().min(1).optional(),
+  title: z.string().trim().min(1, "標題不可空白").max(200).optional(),
+  description: z.string().trim().min(1, "描述不可空白").optional(),
   category: z.enum(["repair", "special_request", "cleaning_note", "other"]).optional(),
   priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
   status: z.enum(["open", "in_progress", "resolved", "closed"]).optional(),

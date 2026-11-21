@@ -1,9 +1,9 @@
 // AC-005 訂房 API 測試：重疊回 409、日期規則回 400、相鄰不算重疊。
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { installSqlRouter, jsonRequest, mockSession, TEST_USER } from "@/test-utils/mock-db";
+import { installSqlRouter, installTransactionPassthrough, jsonRequest, mockSession, TEST_USER } from "@/test-utils/mock-db";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/pg-client", () => ({ pgQuery: vi.fn(), pgQueryOne: vi.fn() }));
+vi.mock("@/lib/pg-client", () => ({ pgQuery: vi.fn(), pgQueryOne: vi.fn(), withTransaction: vi.fn() }));
 
 import { auth } from "@/lib/auth";
 import * as pg from "@/lib/pg-client";
@@ -22,7 +22,17 @@ const existing = (over: Partial<Existing> = {}): Existing => ({
   ...over,
 });
 
+let transactions: number;
+let rolledBack: number;
+
 function db(opts: { ownsProperty?: boolean; existing?: Existing[] } = {}) {
+  transactions = 0;
+  rolledBack = 0;
+  installTransactionPassthrough(
+    pg,
+    () => (rolledBack += 1),
+    () => (transactions += 1),
+  );
   return installSqlRouter(pg, [
     { match: /FROM "Property"/, rows: opts.ownsProperty === false ? [] : [{ id: "p1" }] },
     { match: /^\s*INSERT INTO "Booking"/, rows: [] },
@@ -47,6 +57,31 @@ const inserts = (router: ReturnType<typeof db>) => router.find(/^\s*INSERT INTO 
 beforeEach(() => {
   vi.clearAllMocks();
   mockSession(auth, TEST_USER);
+});
+
+describe("AC-005 POST /api/bookings：同時送出的訂房不會都通過檢查", () => {
+  it("AC-005 先取得這個物業的鎖，再在同一個交易裡檢查重疊與寫入", async () => {
+    const router = db();
+    const res = await post(newBooking());
+    expect(res.status).toBe(201);
+    expect(transactions).toBe(1);
+    const order = router.calls.map((c) => c.sql.replace(/\s+/g, " ").trim());
+    const lock = order.findIndex((q) => /pg_advisory_xact_lock/.test(q));
+    const check = order.findIndex((q) => /"checkIn" < \$3/.test(q));
+    const insert = order.findIndex((q) => /^INSERT INTO "Booking"/.test(q));
+    expect(lock).toBeGreaterThanOrEqual(0);
+    expect(lock).toBeLessThan(check);
+    expect(check).toBeLessThan(insert);
+    expect(router.calls[lock].params).toEqual(["p1"]);
+  });
+
+  it("AC-005 重疊時不寫入（交易內直接結束，不留下半筆資料）", async () => {
+    const router = db({ existing: [existing()] });
+    const res = await post(newBooking());
+    expect(res.status).toBe(409);
+    expect(inserts(router)).toHaveLength(0);
+    expect(transactions).toBe(1);
+  });
 });
 
 describe("AC-005 POST /api/bookings：重疊檢查", () => {
@@ -159,6 +194,20 @@ describe("AC-005 POST /api/bookings：日期規則", () => {
     const res = await post(newBooking({ checkIn: "not-a-date" }));
     expect(res.status).toBe(400);
     expect((await res.json()).error).toBe("入住日期格式錯誤");
+  });
+
+  it("AC-005 不帶時區的時間回 400（避免依伺服器時區解讀）", async () => {
+    const router = db();
+    const res = await post(newBooking({ checkIn: "2026-07-11T15:00", checkOut: "2026-07-13T11:00" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("入住日期格式錯誤");
+    expect(router.calls).toHaveLength(0);
+  });
+
+  it("AC-005 帶時區的 ISO 時間可以接受", async () => {
+    db();
+    const res = await post(newBooking({ checkIn: "2026-07-11T07:00:00Z", checkOut: "2026-07-13T03:00:00+08:00" }));
+    expect(res.status).toBe(201);
   });
 
   it("AC-005 日期規則在查資料庫之前就擋下", async () => {

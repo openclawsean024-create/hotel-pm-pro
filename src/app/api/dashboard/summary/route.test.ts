@@ -328,6 +328,38 @@ describe("AC-009 總覽 API 基本行為", () => {
     expect(res.status).toBe(400);
   });
 
+  it("AC-009 不存在的月份（2026-13、2026-00）回 400，而不是 500", async () => {
+    installSqlRouter(pg, rules({}));
+    for (const month of ["2026-13", "2026-00"]) {
+      const { res, body } = await getSummary(`http://localhost/api/dashboard/summary?month=${month}`);
+      expect(res.status).toBe(400);
+      expect(body.error).toMatch(/有效的月份/);
+    }
+  });
+
+  it("AC-009 今日入住／退房與本月營收以台北時間的日界線查詢（和月報一致）", async () => {
+    const router = installSqlRouter(pg, rules({}));
+    await getSummary("http://localhost/api/dashboard/summary?month=2026-07");
+    const flat = (sql: string) => sql.replace(/\s+/g, " ");
+    const todayCounts = router.calls.filter((c) => /COUNT\(\*\)[\s\S]*FROM "Booking"/.test(c.sql));
+    expect(todayCounts).toHaveLength(2);
+    for (const c of todayCounts) {
+      // 台北 2026-11-16 00:00 = UTC 2026-11-15 16:00
+      expect(c.params.slice(2)).toEqual(["2026-11-15T16:00:00.000Z", "2026-11-16T16:00:00.000Z"]);
+    }
+    const monthRevenue = router.calls.filter(
+      (c) => /SUM\("totalPrice"\)/.test(c.sql) && !/to_char/.test(c.sql),
+    );
+    expect(monthRevenue.length).toBeGreaterThanOrEqual(2);
+    for (const c of monthRevenue) {
+      expect(c.params.slice(2)).toEqual(["2026-06-30T16:00:00.000Z", "2026-07-31T16:00:00.000Z"]);
+    }
+    const trend = router.calls.find((c) => /to_char/.test(c.sql))!;
+    expect(flat(trend.sql)).toMatch(/to_char\(\("checkIn" AT TIME ZONE 'UTC'\) AT TIME ZONE 'Asia\/Taipei', 'YYYY-MM'\)/);
+    // 6 個月：2026-02 ～ 2026-07（台北）
+    expect(trend.params.slice(2)).toEqual(["2026-01-31T16:00:00.000Z", "2026-07-31T16:00:00.000Z"]);
+  });
+
   it("AC-009 沒有物業時回空的總覽", async () => {
     installSqlRouter(pg, rules({ properties: [] }));
     const { res, body } = await getSummary();

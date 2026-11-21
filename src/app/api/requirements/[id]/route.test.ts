@@ -59,6 +59,22 @@ describe("AC-009 需求單可以編輯（PATCH）", () => {
     expect(update.params).toEqual(["測試需求A（已修改）", "新的描述", "urgent", "req-1", TEST_USER.id]);
   });
 
+  it("AC-009 只有空白的標題或描述回 400，且不寫入", async () => {
+    const router = db();
+    const blankTitle = await PATCH!(jsonRequest(URL_, "PATCH", { title: "   " }), routeParams("req-1"));
+    expect(blankTitle.status).toBe(400);
+    expect((await blankTitle.json()).error).toBe("標題不可空白");
+    const blankDesc = await PATCH!(jsonRequest(URL_, "PATCH", { description: "\n\t " }), routeParams("req-1"));
+    expect(blankDesc.status).toBe(400);
+    expect(router.find(/^\s*UPDATE "Requirement"/)).toHaveLength(0);
+  });
+
+  it("AC-009 標題前後空白會被去掉", async () => {
+    const router = db();
+    await PATCH!(jsonRequest(URL_, "PATCH", { title: "  測試需求B  " }), routeParams("req-1"));
+    expect(router.find(/^\s*UPDATE "Requirement"/)[0].params[0]).toBe("測試需求B");
+  });
+
   it("AC-009 更新狀態為 in_progress", async () => {
     const router = db();
     const res = await PATCH!(jsonRequest(URL_, "PATCH", { status: "in_progress" }), routeParams("req-1"));
